@@ -1,0 +1,3887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2a2218">
+<title>屎壳郎 · 屎到临头</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a1510;font-family:"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;touch-action:none}
+#shell{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1510}
+#frame{
+  position:relative;
+  /* always exact 9:16 — never stretch taller than world and leave brown letterbox */
+  aspect-ratio:9/16;
+  height:min(100vh,100dvh);
+  width:min(100vw, calc(min(100vh,100dvh) * 9 / 16));
+  max-width:100vw;
+  max-height:min(100vh,100dvh);
+  border-radius:clamp(10px,1.6vw,18px);
+  overflow:hidden;
+  background:#2a2218;
+  box-shadow:0 0 0 1px #3a3228,0 24px 60px rgba(0,0,0,.55);
+}
+canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+#hud{position:absolute;left:0;right:0;top:0;pointer-events:none;z-index:6;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 0}
+#hud-row{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
+.chip{background:rgba(12,10,8,.72);border:1px solid rgba(160,140,110,.18);border-radius:8px;padding:6px 10px;color:#c8b89a;font-size:11px;line-height:1.3;backdrop-filter:blur(6px)}
+.chip b{color:#e8d4a8;font-weight:600}
+.chip.warn b{color:#d4a070}
+.chip.danger b{color:#e07050;animation:blink 0.55s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
+#hint{margin-top:7px;text-align:center;color:rgba(180,160,130,.45);font-size:10px;letter-spacing:.03em}
+#hint.pulse{color:#d4c090;animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.7}50%{opacity:1}}
+#bar-wrap{position:absolute;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));pointer-events:none;z-index:6}
+#bar-lab{display:flex;justify-content:space-between;color:rgba(180,160,130,.55);font-size:10px;margin-bottom:4px}
+#bar-lab span{color:#c8b89a;font-weight:600}
+#bar{height:5px;border-radius:99px;background:rgba(0,0,0,.5);border:1px solid rgba(140,120,90,.2);overflow:hidden}
+#bar-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#6a4a28,#b89050);transition:width .1s linear}
+#bar-fill.ready{background:linear-gradient(90deg,#8a6a30,#d4b060)}
+#boost-hint{position:absolute;right:14px;bottom:calc(40px + env(safe-area-inset-bottom,0px));pointer-events:none;z-index:6;font-size:9px;color:rgba(160,140,110,.35);text-align:right;line-height:1.4}
+#boost-hint kbd{display:inline-block;padding:1px 4px;border-radius:3px;border:1px solid rgba(160,140,110,.25);background:rgba(0,0,0,.3);color:#b8a888;font-size:9px}
+#stick{position:absolute;left:18px;bottom:calc(52px + env(safe-area-inset-bottom,0px));width:110px;height:110px;border-radius:50%;pointer-events:none;z-index:7;opacity:0;transition:opacity .15s;background:rgba(0,0,0,.28);border:1px solid rgba(160,140,110,.2)}
+#stick.show{opacity:1}
+#stick-knob{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#8a7050,#4a3820 70%,#2a1c10);border:1px solid rgba(180,160,120,.35);box-shadow:0 3px 10px rgba(0,0,0,.5);transform:translate(0,0)}
+.overlay{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(6,5,4,.82);backdrop-filter:blur(8px);padding:22px}
+.overlay.hidden{display:none}
+.card{width:min(100%,300px);background:linear-gradient(180deg,#1e1812,#12100c);border:1px solid rgba(140,120,90,.28);border-radius:14px;padding:24px 18px 18px;text-align:center;color:#c8b89a;box-shadow:0 20px 48px rgba(0,0,0,.6)}
+.card h1{font-size:20px;font-weight:700;letter-spacing:.06em;color:#e0d0b0;margin-bottom:8px}
+.card .sub{font-size:12px;opacity:.7;line-height:1.55;margin-bottom:14px}
+.card .tips{font-size:11px;opacity:.55;line-height:1.5;margin-bottom:16px;text-align:left;padding:10px 12px;background:rgba(0,0,0,.28);border-radius:10px;border:1px solid rgba(140,120,90,.12)}
+.card .tips li{margin:3px 0 3px 1.1em}
+.btn{display:inline-block;border:none;cursor:pointer;padding:11px 26px;border-radius:8px;font-size:14px;font-weight:600;color:#1a140c;background:linear-gradient(180deg,#c8a868,#8a6a38);box-shadow:0 3px 0 #4a3820,0 8px 20px rgba(0,0,0,.4);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #4a3820,0 3px 10px rgba(0,0,0,.3)}
+.toast{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%) scale(.95);z-index:15;pointer-events:none;opacity:0;color:#e8dcc0;font-size:16px;font-weight:600;text-shadow:0 2px 12px rgba(0,0,0,.8);transition:opacity .2s,transform .25s;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.overlay.win-overlay{background:rgba(4,3,2,.94);backdrop-filter:blur(12px)}
+.card.win-card{width:min(100%,340px);padding:32px 22px 22px}
+.card.win-card h1{font-size:28px;letter-spacing:.08em;margin-bottom:12px}
+.card.win-card .sub{font-size:13px;margin-bottom:18px}
+.cinematic-hide{opacity:0!important;pointer-events:none!important;transition:opacity .25s}
+.toast.feast-toast{font-size:22px;top:20%}
+</style>
+<link rel="stylesheet" href="magic.css?v=death-punch-6">
+</head>
+<body>
+<div id="shell">
+  <div id="frame">
+    <canvas id="c"></canvas>
+    <div id="hud">
+      <div id="hud-row">
+        <div class="chip">体型 <b id="sz">—</b></div>
+        <div class="chip" id="timeChip">时限 <b id="tm">∞</b></div>
+        <div class="chip warn">剩球 <b id="left">—</b></div>
+      </div>
+      <div id="hint">鼠标/轮盘转向 · 空格/Shift 短加速 · 吃光过关</div>
+    </div>
+    <div id="bar-wrap">
+      <div id="bar-lab"><span>清场进度</span><span id="pct">0%</span></div>
+      <div id="bar"><div id="bar-fill"></div></div>
+    </div>
+    <div id="boost-hint"><kbd>空格</kbd> / <kbd>Shift</kbd> 短加速</div>
+    <div id="stick"><div id="stick-knob"></div></div>
+    <div id="toast" class="toast"></div>
+    <button id="sound-btn" aria-label="关闭音效" aria-pressed="false">♪</button>
+    <button id="skip-ending">跳过动画</button>
+    <div id="start" class="overlay">
+      <div class="card">
+        <div class="eyebrow">屎壳郎 · 清场挑战</div>
+        <div class="menu-hero" aria-hidden="true"><div class="hero-beetle"></div><div class="hero-ball"></div></div>
+        <h1>屎到临头</h1>
+        <p class="sub">今天这场，谁能吃到最后？</p>
+        <div class="tips">鼠标 / 滑动转向 · 空格 / Shift 短加速<br>手机右侧双击加速</div>
+        <button class="btn" id="btnStart">开滚！</button>
+        <div class="menu-note">不限时间。能吃多少，全看本事。</div>
+      </div>
+    </div>
+    <div id="dead" class="overlay hidden">
+      <div class="card">
+        <div class="stamp">已被打包带走</div><h1>这下老实了</h1>
+        <p class="sub" id="deadMsg">本来是来干饭的，结果成了别人的饭。</p>
+        <div class="round-stats" id="dead-stats"></div><button class="btn" id="btnRetry">不服，再滚一把</button>
+      </div>
+    </div>
+    <div id="timeout" class="overlay hidden">
+      <div class="card">
+        <h1>时间到</h1>
+        <p class="sub" id="timeoutMsg">还剩几颗没吞完……</p>
+        <button class="btn" id="btnTimeRetry">再来</button>
+      </div>
+    </div>
+    <div id="win" class="overlay win-overlay hidden">
+      <div class="card win-card">
+        <div class="stamp win">本场干饭冠军</div><h1>一口都没剩！</h1>
+        <p class="sub" id="winMsg">全吞光了。</p>
+        <div class="round-stats" id="win-stats"></div><button class="btn" id="btnAgain">再开一桌</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const elSz = document.getElementById('sz');
+const elTm = document.getElementById('tm');
+const elLeft = document.getElementById('left');
+const elTimeChip = document.getElementById('timeChip');
+const elPct = document.getElementById('pct');
+const elFill = document.getElementById('bar-fill');
+const elHint = document.getElementById('hint');
+const elToast = document.getElementById('toast');
+const elStick = document.getElementById('stick');
+const elKnob = document.getElementById('stick-knob');
+const elHud = document.getElementById('hud');
+const elBarWrap = document.getElementById('bar-wrap');
+const elBoostHint = document.getElementById('boost-hint');
+const ovStart = document.getElementById('start');
+const ovDead = document.getElementById('dead');
+const ovWin = document.getElementById('win');
+const ovTimeout = document.getElementById('timeout');
+const deadMsg = document.getElementById('deadMsg');
+const winMsg = document.getElementById('winMsg');
+const timeoutMsg = document.getElementById('timeoutMsg');
+
+const W = 900, H = 1600;
+const ARENA = { x: 40, y: 40, w: W - 80, h: H - 80 };
+const TIME_LIMIT = 80;
+const START_R = 16;
+const MOVE_SPEED_MULT = 1.3;
+const BASE_SPD = 295 * MOVE_SPEED_MULT;
+const BOOST_MULT = 2.25;
+const BOOST_DUR = 0.28;
+const BOOST_CD = 0.45;
+const TURN_RATE = 12.8;
+
+let dpr = 1, vw = 0, vh = 0;
+let state = 'start';
+let time = 0, timeLeft = TIME_LIMIT, hitStop = 0, shake = 0, toastT = 0;
+let cam = { x: W / 2, y: H * 0.62, z: 1 };
+let particles = [];
+let dust = [];
+let marks = [];
+let eatRings = []; // expanding impact rings on player eat (no screen shake)
+let boostGhosts = []; // afterimage for boost readability
+let popTexts = [];
+let totalSpawned = 0;
+let kills = 0;
+// Roster counts for calculated initial spawn (NPC radii fixed after spawn; no runtime inflate).
+const SNACK_N = 20;
+const PACK_N = 17;
+const THREAT_N = 14;
+const ABSORB_RATIO = 0.82;
+let feast = null; // short victory eat cinematic
+let devour = null; // death cinematic (agar|hole|slither)
+// Default 'slither': user picked Slither pellet-burst death (hold then explode into dung pellets).
+window.__deathStyle = window.__deathStyle || 'slither';
+
+// RECORDING ONLY — defaults leave difficulty unchanged for normal players.
+// Console helpers for slow-play clear-all victory takes (do not enable by default).
+window.__timeScale = (typeof window.__timeScale === 'number') ? window.__timeScale : 1;
+window.__clearAssist = !!window.__clearAssist; // RECORDING ONLY: god-mode vs eaten (NPC sizes are fixed at spawn; no runtime inflation)
+window.__autoWinBot = !!window.__autoWinBot;   // when true: survival-first auto steer
+window.__winTakePending = !!window.__winTakePending;
+window.__applyWinTakeEffects = function () {
+  window.__timeScale = 0.35;
+  window.__clearAssist = true;
+  window.__autoWinBot = true;
+  if (typeof player !== 'undefined' && player && state === 'play') {
+    player.invuln = Math.max(player.invuln || 0, 2.5);
+  }
+  console.log('win take armed');
+};
+window.__startWinTake = function () {
+  // Arm before play (menu): pending applies after spawn in startPlay.
+  // Arm during play: apply immediately + extra spawn-safety invuln.
+  if (typeof state === 'undefined' || state !== 'play') {
+    window.__winTakePending = true;
+    window.__timeScale = 0.35;
+    window.__clearAssist = true;
+    window.__autoWinBot = true;
+    console.log('win take pending (will apply on start)');
+    return;
+  }
+  window.__winTakePending = false;
+  window.__applyWinTakeEffects();
+};
+
+// RECORDING ONLY — clock top-up / live probe (balls still must reach 0 naturally).
+window.__extendTimeLeft = function (n) {
+  const add = Number(n) || 0;
+  if (!add) return timeLeft;
+  timeLeft = Math.max(0, timeLeft + add);
+  try { updateHUD(); } catch (_) {}
+  console.log('extended timeLeft by', add, '->', timeLeft);
+  return timeLeft;
+};
+window.__recProbe = function () {
+  return {
+    state: (typeof state !== 'undefined') ? state : null,
+    left: (typeof balls !== 'undefined' && balls) ? balls.length : null,
+    timeLeft: (typeof timeLeft !== 'undefined') ? timeLeft : null,
+    playerR: (typeof player !== 'undefined' && player) ? player.r : null,
+    kills: (typeof kills !== 'undefined') ? kills : null,
+    totalSpawned: (typeof totalSpawned !== 'undefined') ? totalSpawned : null,
+  };
+};
+
+// PLAYTEST ONLY — jump to cleaned feast→win without full clear.
+window.__forceFeast = function () {
+  if (state === 'feast' || state === 'win') {
+    console.log('already in feast/win');
+    return;
+  }
+  if (state !== 'play') {
+    console.log('start play first (开滚), then __forceFeast()');
+    return;
+  }
+  balls.length = 0;
+  updateHUD();
+  winGame();
+  console.log('forced feast');
+};
+
+/* ---- procedural textures (baked once) ---- */
+let texDirt = null;      // tiled dirt floor
+let texDungNoise = null; // grayscale grain for dung
+let texFiber = null;     // fiber streaks
+let texWet = null;       // wet stain splatters
+
+function mulberry32(a) {
+  return function () {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function bakeTextures() {
+  // Full-arena dirt (no tile seams) — half-res bake, scaled up
+  {
+    const sw = 550, sh = 900; // ~W/2 x H/2-ish for perf
+    const c = document.createElement('canvas');
+    c.width = sw; c.height = sh;
+    const g = c.getContext('2d');
+    const rng = mulberry32(0xD127);
+    const bg = g.createLinearGradient(0, 0, sw * 0.3, sh);
+    bg.addColorStop(0, '#9a7a52');
+    bg.addColorStop(0.4, '#8a6a44');
+    bg.addColorStop(1, '#7a5a38');
+    g.fillStyle = bg;
+    g.fillRect(0, 0, sw, sh);
+    for (let oct = 0; oct < 5; oct++) {
+      const n = (120 >> oct) * 3;
+      const amp = 0.11 / (oct + 1);
+      for (let i = 0; i < n; i++) {
+        const x = rng() * sw, y = rng() * sh;
+        const r = (10 + rng() * 55) / (oct + 1);
+        const v = (rng() - 0.45) * amp;
+        const br = Math.floor(95 + v * 280);
+        g.fillStyle = `rgba(${br + 28},${br + 16},${br + 2},${Math.abs(v) * 2.8 + 0.06})`;
+        g.beginPath();
+        g.ellipse(x, y, r, r * (0.45 + rng() * 0.65), rng() * 6, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    for (let i = 0; i < 40; i++) {
+      const x = rng() * sw, y = rng() * sh;
+      const r = 22 + rng() * 60;
+      const wg = g.createRadialGradient(x, y, 0, x, y, r);
+      wg.addColorStop(0, 'rgba(70,48,24,0.28)');
+      wg.addColorStop(0.5, 'rgba(90,62,32,0.14)');
+      wg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = wg;
+      g.beginPath();
+      g.ellipse(x, y, r, r * 0.65, rng() * 3, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = 'rgba(210,180,120,0.14)';
+      g.beginPath();
+      g.ellipse(x - r * 0.2, y - r * 0.22, r * 0.32, r * 0.12, -0.4, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (let i = 0; i < 520; i++) {
+      const x = rng() * sw, y = rng() * sh;
+      const r = 0.8 + rng() * 3.2;
+      const shade = 90 + rng() * 90;
+      g.fillStyle = `rgba(${shade|0},${(shade * 0.72)|0},${(shade * 0.42)|0},${0.3 + rng() * 0.45})`;
+      g.beginPath();
+      g.ellipse(x, y, r, r * (0.45 + rng() * 0.55), rng() * 4, 0, Math.PI * 2);
+      g.fill();
+    }
+    // sparse larger stones
+    for (let i = 0; i < 60; i++) {
+      const x = rng() * sw, y = rng() * sh;
+      const r = 2.5 + rng() * 5;
+      g.fillStyle = `rgba(${110 + rng() * 50|0},${90 + rng() * 35|0},${55 + rng() * 25|0},0.5)`;
+      g.beginPath();
+      g.ellipse(x, y, r, r * 0.6, rng() * 3, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = 'rgba(230,200,140,0.22)';
+      g.beginPath();
+      g.ellipse(x - r * 0.25, y - r * 0.25, r * 0.35, r * 0.2, -0.4, 0, Math.PI * 2);
+      g.fill();
+    }
+    const img = g.getImageData(0, 0, sw, sh);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (rng() - 0.5) * 16;
+      d[i] = Math.max(0, Math.min(255, d[i] + n));
+      d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.85));
+      d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.55));
+    }
+    g.putImageData(img, 0, 0);
+    const wash = g.createRadialGradient(sw * 0.4, sh * 0.12, 20, sw * 0.5, sh * 0.4, sh * 0.75);
+    wash.addColorStop(0, 'rgba(255,220,150,0.2)');
+    wash.addColorStop(0.45, 'rgba(220,180,110,0.08)');
+    wash.addColorStop(1, 'rgba(40,28,14,0.1)');
+    g.fillStyle = wash;
+    g.fillRect(0, 0, sw, sh);
+    texDirt = c;
+  }
+
+  // Dung surface noise 256x256
+  {
+    const s = 256;
+    const c = document.createElement('canvas');
+    c.width = c.height = s;
+    const g = c.getContext('2d');
+    const rng = mulberry32(0xBEEF);
+    g.fillStyle = '#6a4830';
+    g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 1400; i++) {
+      const x = rng() * s, y = rng() * s;
+      const r = 1 + rng() * 6;
+      const dark = rng() > 0.5;
+      g.fillStyle = dark
+        ? `rgba(20,10,4,${0.25 + rng() * 0.5})`
+        : `rgba(200,160,90,${0.12 + rng() * 0.35})`;
+      g.beginPath();
+      g.ellipse(x, y, r, r * (0.4 + rng() * 0.7), rng() * 5, 0, Math.PI * 2);
+      g.fill();
+    }
+    // fiber strokes
+    g.strokeStyle = 'rgba(40,25,12,0.35)';
+    g.lineWidth = 1;
+    g.lineCap = 'round';
+    for (let i = 0; i < 140; i++) {
+      const x = rng() * s, y = rng() * s;
+      const len = 10 + rng() * 36;
+      const a = rng() * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(
+        x + Math.cos(a + 0.3) * len * 0.5,
+        y + Math.sin(a + 0.3) * len * 0.5,
+        x + Math.cos(a) * len,
+        y + Math.sin(a) * len
+      );
+      g.stroke();
+    }
+    texDungNoise = c;
+  }
+
+  // Fiber ring strip (for rolling UV)
+  {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const g = c.getContext('2d');
+    const rng = mulberry32(0xF1BE);
+    g.clearRect(0, 0, 256, 64);
+    for (let i = 0; i < 60; i++) {
+      const x = rng() * 256;
+      const y = 8 + rng() * 48;
+      g.strokeStyle = `rgba(${30 + rng() * 40},${18 + rng() * 20},${8},${0.25 + rng() * 0.4})`;
+      g.lineWidth = 0.8 + rng() * 1.6;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.bezierCurveTo(x + 10, y - 4, x + 20, y + 5, x + 30 + rng() * 20, y + (rng() - 0.5) * 8);
+      g.stroke();
+    }
+    texFiber = c;
+  }
+
+  // Wet stain for ground marks
+  {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const rg = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+    rg.addColorStop(0, 'rgba(25,15,8,0.55)');
+    rg.addColorStop(0.5, 'rgba(40,25,12,0.28)');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, 64, 64);
+    texWet = c;
+  }
+}
+bakeTextures();
+
+/* ---- real dung-ball photo textures (elephant dung crops) ---- */
+const DUNG_PHOTO_SRCS = ['tex/dung-a.jpg', 'tex/dung-b.jpg', 'tex/dung-c.jpg'];
+const DUNG_ATLAS_SIZES = [64, 128, 256];
+/** @type {Array<null|{64:HTMLCanvasElement,128:HTMLCanvasElement,256:HTMLCanvasElement}>} */
+const dungPhotoAtlases = [null, null, null];
+let dungPhotosReady = false;
+
+function bakeDungPhotoAtlas(img, size) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.beginPath();
+  g.arc(size / 2, size / 2, size / 2 - 0.5, 0, Math.PI * 2);
+  g.closePath();
+  g.clip();
+  const iw = img.naturalWidth || img.width;
+  const ih = img.naturalHeight || img.height;
+  const scale = Math.max(size / iw, size / ih) * 1.08;
+  const dw = iw * scale, dh = ih * scale;
+  g.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+  return c;
+}
+
+function loadDungPhotos() {
+  let pending = DUNG_PHOTO_SRCS.length;
+  let loaded = 0;
+  DUNG_PHOTO_SRCS.forEach((src, i) => {
+    const img = new Image();
+    img.onload = () => {
+      const map = {};
+      for (const s of DUNG_ATLAS_SIZES) map[s] = bakeDungPhotoAtlas(img, s);
+      dungPhotoAtlases[i] = map;
+      loaded++;
+      pending--;
+      if (pending === 0) dungPhotosReady = loaded > 0;
+    };
+    img.onerror = () => {
+      console.warn('dung photo failed to load:', src);
+      pending--;
+      if (pending === 0) dungPhotosReady = loaded > 0;
+    };
+    img.src = src;
+  });
+}
+loadDungPhotos();
+
+function pickDungAtlas(seed, r) {
+  if (!dungPhotosReady) return null;
+  const idx = Math.abs(seed | 0) % 3;
+  let map = dungPhotoAtlases[idx];
+  let useIdx = idx;
+  if (!map) {
+    for (let k = 0; k < 3; k++) {
+      if (dungPhotoAtlases[k]) { map = dungPhotoAtlases[k]; useIdx = k; break; }
+    }
+  }
+  if (!map) return null;
+  let size = 64;
+  if (r >= 42) size = 256;
+  else if (r >= 18) size = 128;
+  const atlas = map[size] || map[128] || map[64];
+  if (!atlas) return null;
+  return { atlas, idx: useIdx, size };
+}
+
+
+const player = {
+  x: W / 2, y: H * 0.82, r: START_R,
+  vx: 0, vy: 0,
+  heading: -Math.PI / 2,
+  roll: 0, face: 'focus',
+  squash: 1, stretch: 1,
+  beetleAng: Math.PI / 2,
+  pushEffort: 0,
+  squeeze: 0,
+  targetR: START_R,
+  invuln: 0,
+  bounceCD: 0,
+  steerLock: 0,
+  boostT: 0,
+  boostCD: 0,
+  seed: 0xAce1,
+};
+
+let balls = [];
+
+const input = {
+  aimX: 0, aimY: -1,
+  pointerOn: false,
+  cx: 0, cy: 0,
+  stick: false,
+  sox: 0, soy: 0,
+  sx: 0, sy: 0,
+  boostKey: false,
+  isTouch: false,
+};
+
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpAngle(a, b, t) {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
+}
+function norm(x, y) {
+  const l = Math.hypot(x, y) || 1;
+  return { x: x / l, y: y / l };
+}
+
+function resize() {
+  const frame = document.getElementById('frame');
+  const rect = frame.getBoundingClientRect();
+  vw = rect.width; vh = rect.height;
+  dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  canvas.width = Math.round(vw * dpr);
+  canvas.height = Math.round(vh * dpr);
+  canvas.style.width = vw + 'px';
+  canvas.style.height = vh + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function viewScale() {
+  // frame CSS locks 9:16 to match W/H, so contain fills the canvas with no dead brown bands
+  return Math.min(vw / W, vh / H) * cam.z;
+}
+
+function screenToWorld(sx, sy) {
+  const scale = viewScale();
+  const ox = vw / 2 - cam.x * scale;
+  const oy = vh / 2 - cam.y * scale;
+  return { x: (sx - ox) / scale, y: (sy - oy) / scale };
+}
+
+function showToast(msg, dur = 1.1) {
+  elToast.textContent = msg;
+  elToast.classList.add('show');
+  toastT = dur;
+}
+
+function makeBall(x, y, r, kind) {
+  const seed = (Math.random() * 1e9) | 0;
+  const ang = Math.random() * Math.PI * 2;
+  return {
+    x, y, r, vx: 0, vy: 0,
+    roll: Math.random() * Math.PI * 2,
+    seed, kind: kind || 'ai',
+    tier: 'snack', // snack | pack | threat
+    face: 'neutral',
+    squash: 1, stretch: 1,
+    targetR: r,
+    beetleAng: ang + Math.PI,
+    pushEffort: 0.35,
+    squeeze: 0,
+    bounceCD: 0,
+    ai: {
+      ang,
+      spd: 115 + Math.random() * 45,
+      tx: x, ty: y,
+      retarget: 1.5 + Math.random() * 2.5,
+      maxTurn: 1.2 + Math.random() * 0.6,
+    },
+  };
+}
+
+function placeClear(r, existing, margin) {
+  for (let i = 0; i < 120; i++) {
+    const x = ARENA.x + margin + Math.random() * (ARENA.w - margin * 2);
+    const yMin = ARENA.y + margin + 80;
+    const yMax = ARENA.y + ARENA.h - margin - 140;
+    const y = yMin + Math.random() * Math.max(40, yMax - yMin);
+    let ok = true;
+    const dx0 = x - player.x, dy0 = y - player.y;
+    if (Math.hypot(dx0, dy0) < r + player.r + 90) ok = false;
+    if (ok) {
+      for (const b of existing) {
+        if (Math.hypot(x - b.x, y - b.y) < r + b.r + 22) { ok = false; break; }
+      }
+    }
+    if (ok) return { x, y };
+  }
+  return {
+    x: ARENA.x + ARENA.w * (0.15 + Math.random() * 0.7),
+    y: ARENA.y + 160 + Math.random() * (ARENA.h - 320),
+  };
+}
+
+function resetLevel() {
+  resetPresentation();
+  time = 0; timeLeft = Infinity; hitStop = 0; shake = 0;
+  particles.length = 0; dust.length = 0; marks.length = 0; eatRings.length = 0; popTexts.length = 0; boostGhosts.length = 0;
+  feast = null;
+  devour = null;
+  player.x = W / 2; player.y = H * 0.82;
+  player.r = START_R; player.targetR = START_R;
+  player.heading = -Math.PI / 2;
+  player.vx = 0; player.vy = -BASE_SPD;
+  player.roll = 0; player.face = 'focus';
+  player.squash = 1; player.stretch = 1;
+  player.beetleAng = Math.PI / 2;
+  player.pushEffort = 0.5; player.squeeze = 0;
+  player.invuln = 0.85; player.bounceCD = 0; player.steerLock = 0;
+  player.boostT = 0; player.boostCD = 0;
+  player.hideBall = false; player.deathTint = 0;
+  cam.x = player.x; cam.y = Math.min(player.y - 40, ARENA.y + ARENA.h * 0.55); cam.z = 1;
+  input.aimX = 0; input.aimY = -1;
+  input.boostKey = false;
+
+  balls = [];
+  kills = 0;
+  // Calculated fixed roster at reset only — NPC radii never inflate mid-run.
+  const sizes = buildInitialRadii();
+  for (const spec of sizes) {
+    const r = spec.r;
+    const margin = r < 18 ? 36 : 52;
+    const p = placeClear(r, balls, margin);
+    const b = makeBall(p.x, p.y, r, 'ai');
+    b.tier = spec.tier;
+    b.targetR = r; // lock: NPCs do not grow by eating or pressure
+    b.ai.spd = ((b.tier === 'threat' ? 138 : b.tier === 'pack' ? 128 : 118) + Math.random() * 40) * MOVE_SPEED_MULT;
+    b.ai.maxTurn = (b.tier === 'threat' ? 1.05 : 1.3) + Math.random() * 0.5;
+    pickWaypoint(b);
+    b.ai.ang = Math.atan2(b.ai.ty - b.y, b.ai.tx - b.x);
+    b.vx = Math.cos(b.ai.ang) * b.ai.spd;
+    b.vy = Math.sin(b.ai.ang) * b.ai.spd;
+    balls.push(b);
+  }
+  totalSpawned = balls.length;
+
+  elHint.textContent = '鼠标/轮盘转向 · 空格/Shift 短加速 · 吃光过关';
+  elHint.classList.remove('pulse');
+  elFill.classList.remove('ready');
+  elTimeChip.classList.remove('danger');
+  elHud.classList.remove('cinematic-hide');
+  elBarWrap.classList.remove('cinematic-hide');
+  elBoostHint.classList.remove('cinematic-hide');
+  elStick.classList.remove('cinematic-hide');
+  elToast.classList.remove('feast-toast');
+  updateHUD();
+}
+
+function formatTime(t) {
+  const s = Math.max(0, Math.ceil(t));
+  const m = (s / 60) | 0;
+  const r = s % 60;
+  return m + ':' + (r < 10 ? '0' : '') + r;
+}
+
+function updateHUD() {
+  elSz.textContent = Math.round(player.r);
+  elTm.textContent = '∞';
+  elLeft.textContent = balls.length;
+  const cleared = totalSpawned - balls.length;
+  const ratio = totalSpawned ? cleared / totalSpawned : 0;
+  const pct = Math.floor(ratio * 100);
+  elPct.textContent = pct + '%';
+  elFill.style.width = pct + '%';
+  if (balls.length === 0) elFill.classList.add('ready');
+  else elFill.classList.remove('ready');
+  elTimeChip.classList.remove('danger');
+}
+
+function cruiseSpeed() {
+  const massFactor = 1 / Math.sqrt(1 + (player.r - START_R) * 0.012);
+  const boost = player.boostT > 0 ? BOOST_MULT : 1;
+  return BASE_SPD * massFactor * boost;
+}
+
+function pointerCanvasXY(e) {
+  const t = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+  const rect = canvas.getBoundingClientRect();
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+
+function updateAimFromWorld(wx, wy) {
+  // Ignore aim samples deep outside the arena (HUD / former letterbox dead zone)
+  // so the beetle doesn't charge the outer wall from a brown-band click.
+  const margin = 8;
+  if (wx < ARENA.x - 80 || wx > ARENA.x + ARENA.w + 80 ||
+      wy < ARENA.y - 80 || wy > ARENA.y + ARENA.h + 80) {
+    return;
+  }
+  wx = clamp(wx, ARENA.x + margin, ARENA.x + ARENA.w - margin);
+  wy = clamp(wy, ARENA.y + margin, ARENA.y + ARENA.h - margin);
+  let dx = wx - player.x, dy = wy - player.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 6) return;
+  input.aimX = dx / d;
+  input.aimY = dy / d;
+}
+
+function updateStickUI() {
+  if (!input.stick) {
+    elStick.classList.remove('show');
+    return;
+  }
+  elStick.classList.add('show');
+  const maxR = 34;
+  let dx = input.sx - input.sox, dy = input.sy - input.soy;
+  const d = Math.hypot(dx, dy);
+  if (d > maxR) { dx = dx / d * maxR; dy = dy / d * maxR; }
+  elKnob.style.transform = `translate(${dx}px,${dy}px)`;
+}
+
+function tryBoost() {
+  if (state !== 'play') return;
+  if (player.boostCD > 0 || player.boostT > 0) return;
+  player.boostT = BOOST_DUR;
+  player.boostCD = BOOST_CD + BOOST_DUR;
+  player.squash = 0.82;
+  player.stretch = 1.28;
+  player.squeeze = 1;
+  const back = player.heading + Math.PI;
+  const hx = Math.cos(player.heading), hy = Math.sin(player.heading);
+  // burst dust + kick pebbles — readable speed punch (no balance change)
+  for (let i = 0; i < 16; i++) {
+    const spread = (Math.random() - 0.5) * 1.1;
+    const bx = Math.cos(back + spread), by = Math.sin(back + spread);
+    dust.push({
+      x: player.x + bx * player.r * (0.6 + Math.random() * 0.5),
+      y: player.y + by * player.r * (0.6 + Math.random() * 0.5),
+      r: 5 + Math.random() * 11, a: 0.7, life: 0.35 + Math.random() * 0.35,
+      vx: bx * (70 + Math.random() * 140) + (Math.random() - 0.5) * 50,
+      vy: by * (70 + Math.random() * 140) + (Math.random() - 0.5) * 50,
+    });
+  }
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x: player.x - hx * player.r * 0.4,
+      y: player.y - hy * player.r * 0.4,
+      r: 2 + Math.random() * 3,
+      life: 0.28 + Math.random() * 0.2,
+      vx: -hx * (120 + Math.random() * 180) + (Math.random() - 0.5) * 80,
+      vy: -hy * (120 + Math.random() * 180) + (Math.random() - 0.5) * 80,
+      c: Math.random() > 0.5 ? '#8a6a38' : '#5a4020',
+    });
+  }
+  for (let i = 0; i < 3; i++) {
+    boostGhosts.push({
+      x: player.x - Math.cos(player.heading) * player.r * (0.35 * i),
+      y: player.y - Math.sin(player.heading) * player.r * (0.35 * i),
+      r: player.r * (1 - i * 0.06),
+      heading: player.heading, life: 0.32 - i * 0.04, max: 0.32 - i * 0.04,
+    });
+  }
+  // no screen shake — local boost ghosts / particles only
+  try { navigator.vibrate && navigator.vibrate(18); } catch (_) {}
+}
+
+function bindInput() {
+  const onDown = (e) => {
+    if (state !== 'play') return;
+    e.preventDefault();
+    const p = pointerCanvasXY(e);
+    input.cx = p.x; input.cy = p.y;
+    input.pointerOn = true;
+    if (e.touches) {
+      input.isTouch = true;
+      input.stick = true;
+      input.sox = p.x; input.soy = p.y;
+      input.sx = p.x; input.sy = p.y;
+      updateStickUI();
+    } else {
+      input.isTouch = false;
+      const w = screenToWorld(p.x, p.y);
+      updateAimFromWorld(w.x, w.y);
+    }
+  };
+  const onMove = (e) => {
+    if (state !== 'play') return;
+    const p = pointerCanvasXY(e);
+    input.cx = p.x; input.cy = p.y;
+    if (input.isTouch && input.stick) {
+      e.preventDefault();
+      input.sx = p.x; input.sy = p.y;
+      let dx = input.sx - input.sox, dy = input.sy - input.soy;
+      const d = Math.hypot(dx, dy);
+      if (d > 10) {
+        input.aimX = dx / d;
+        input.aimY = dy / d;
+      }
+      const maxR = 52;
+      if (d > maxR) {
+        input.sox = input.sx - (dx / d) * maxR;
+        input.soy = input.sy - (dy / d) * maxR;
+      }
+      updateStickUI();
+    } else if (!input.isTouch) {
+      const w = screenToWorld(p.x, p.y);
+      updateAimFromWorld(w.x, w.y);
+      input.pointerOn = true;
+    }
+  };
+  const onUp = (e) => {
+    if (input.stick) {
+      e.preventDefault();
+      input.stick = false;
+      input.pointerOn = false;
+      updateStickUI();
+    }
+  };
+
+  canvas.addEventListener('mousedown', onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  canvas.addEventListener('touchend', onUp, { passive: false });
+  canvas.addEventListener('touchcancel', onUp, { passive: false });
+  document.body.addEventListener('touchmove', e => { if (e.target === canvas) e.preventDefault(); }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+      e.preventDefault();
+      input.boostKey = true;
+      tryBoost();
+    }
+    const map = {
+      KeyW: [0, -1], ArrowUp: [0, -1],
+      KeyS: [0, 1], ArrowDown: [0, 1],
+      KeyA: [-1, 0], ArrowLeft: [-1, 0],
+      KeyD: [1, 0], ArrowRight: [1, 0],
+    };
+    if (map[e.code]) {
+      e.preventDefault();
+      input.aimX = map[e.code][0];
+      input.aimY = map[e.code][1];
+      const n = norm(input.aimX, input.aimY);
+      input.aimX = n.x; input.aimY = n.y;
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+      input.boostKey = false;
+    }
+  });
+
+  let lastTap = 0;
+  canvas.addEventListener('touchstart', (e) => {
+    if (state !== 'play' || !e.touches) return;
+    const p = pointerCanvasXY(e);
+    if (p.x > vw * 0.62) {
+      const now = performance.now();
+      if (now - lastTap < 320) tryBoost();
+      lastTap = now;
+    }
+  }, { passive: true });
+}
+bindInput();
+
+function startPlay() {
+  ovStart.classList.add('hidden');
+  ovDead.classList.add('hidden');
+  ovWin.classList.add('hidden');
+  ovTimeout.classList.add('hidden');
+  resetLevel();
+  state = 'play';
+  ensureAudio();
+  if (window.__winTakePending) {
+    window.__winTakePending = false;
+    window.__applyWinTakeEffects();
+  }
+  showToast('开滚！吃光它们', 0.9);
+}
+document.getElementById('btnStart').onclick = startPlay;
+document.getElementById('btnRetry').onclick = startPlay;
+document.getElementById('btnAgain').onclick = startPlay;
+document.getElementById('btnTimeRetry').onclick = startPlay;
+
+function applyPlayerInput(dt) {
+  if (!window.__autoWinBot && !input.isTouch && input.pointerOn) {
+    const w = screenToWorld(input.cx, input.cy);
+    updateAimFromWorld(w.x, w.y);
+  }
+  if (player.boostT > 0) {
+    player.boostT -= dt;
+    if (player.boostT <= 0) player.boostT = 0;
+  }
+  if (player.boostCD > 0) player.boostCD -= dt;
+
+  if (player.steerLock > 0) {
+    player.steerLock -= dt;
+  } else {
+    const want = Math.atan2(input.aimY, input.aimX);
+    let da = want - player.heading;
+    while (da > Math.PI) da -= Math.PI * 2;
+    while (da < -Math.PI) da += Math.PI * 2;
+    const maxTurn = TURN_RATE * dt * (player.boostT > 0 ? 1.15 : 1);
+    da = clamp(da, -maxTurn, maxTurn);
+    player.heading += da;
+  }
+
+  const spd = cruiseSpeed();
+  player.vx = Math.cos(player.heading) * spd;
+  player.vy = Math.sin(player.heading) * spd;
+
+  const wantBeet = player.heading + Math.PI;
+  let dBeet = wantBeet - player.beetleAng;
+  while (dBeet > Math.PI) dBeet -= Math.PI * 2;
+  while (dBeet < -Math.PI) dBeet += Math.PI * 2;
+  player.beetleAng += dBeet * Math.min(1, 12 * dt);
+
+  const effortTarget = player.boostT > 0 ? 1 : 0.72;
+  player.pushEffort = lerp(player.pushEffort, effortTarget, 0.2);
+  player.squeeze = lerp(player.squeeze, player.boostT > 0 ? 1 : 0.55, 0.18);
+
+  if (player.boostT > BOOST_DUR * 0.6) {
+    player.stretch = lerp(player.stretch, 1.22, 0.3);
+    player.squash = lerp(player.squash, 0.86, 0.3);
+  }
+}
+
+function integrateBall(b, dt, isPlayer) {
+  b.x += b.vx * dt;
+  b.y += b.vy * dt;
+  const spd = Math.hypot(b.vx, b.vy);
+  b.roll += (spd / Math.max(8, b.r)) * dt;
+
+  const minX = ARENA.x + b.r, maxX = ARENA.x + ARENA.w - b.r;
+  const minY = ARENA.y + b.r;
+  const maxY = ARENA.y + ARENA.h - b.r;
+  if (isPlayer) {
+    if (b.x < minX) { b.x = minX; if (Math.cos(player.heading) < 0) reflectHeading(1, 0); }
+    if (b.x > maxX) { b.x = maxX; if (Math.cos(player.heading) > 0) reflectHeading(-1, 0); }
+    if (b.y < minY) { b.y = minY; if (Math.sin(player.heading) < 0) reflectHeading(0, 1); }
+    if (b.y > maxY) { b.y = maxY; if (Math.sin(player.heading) > 0) reflectHeading(0, -1); }
+    const s = cruiseSpeed();
+    player.vx = Math.cos(player.heading) * s;
+    player.vy = Math.sin(player.heading) * s;
+  } else {
+    if (b.x < minX) { b.x = minX; b.vx = Math.max(0, b.vx) * 0.2; if (b.ai) b.ai.ang = 0; }
+    if (b.x > maxX) { b.x = maxX; b.vx = Math.min(0, b.vx) * 0.2; if (b.ai) b.ai.ang = Math.PI; }
+    if (b.y < minY) { b.y = minY; b.vy = Math.max(0, b.vy) * 0.2; if (b.ai) b.ai.ang = Math.PI / 2; }
+    if (b.y > maxY) { b.y = maxY; b.vy = Math.min(0, b.vy) * 0.2; if (b.ai) b.ai.ang = -Math.PI / 2; }
+  }
+
+  if (b.targetR != null && Math.abs(b.r - b.targetR) > 0.05) {
+    b.r += (b.targetR - b.r) * Math.min(1, 8 * dt);
+  } else if (b.targetR != null) {
+    b.r = b.targetR;
+  }
+  b.squash += (1 - b.squash) * Math.min(1, 10 * dt);
+  b.stretch += (1 - b.stretch) * Math.min(1, 10 * dt);
+  if (b.squeeze != null) b.squeeze += (0 - b.squeeze) * Math.min(1, 3 * dt);
+
+  if (spd > 60 && Math.random() < dt * 2.2) {
+    marks.push({ x: b.x, y: b.y, r: b.r * 0.55, a: 0.18, life: 2.2 });
+    if (marks.length > 18) marks.shift();
+  }
+}
+
+function reflectHeading(nx, ny) {
+  let hx = Math.cos(player.heading), hy = Math.sin(player.heading);
+  const dot = hx * nx + hy * ny;
+  if (dot < 0) {
+    hx -= 2 * dot * nx;
+    hy -= 2 * dot * ny;
+    player.heading = Math.atan2(hy, hx);
+    input.aimX = Math.cos(player.heading);
+    input.aimY = Math.sin(player.heading);
+    player.steerLock = Math.max(player.steerLock, 0.08);
+  }
+}
+
+function pickWaypoint(b) {
+  const m = 50 + b.r;
+  b.ai.tx = ARENA.x + m + Math.random() * (ARENA.w - m * 2);
+  b.ai.ty = ARENA.y + m + 80 + Math.random() * (ARENA.h - m * 2 - 100);
+  b.ai.retarget = 1.8 + Math.random() * 3.0;
+  if (b.ai.spd == null || b.ai._needSpd) {
+    const base = b.r >= 30 ? 140 : 118;
+    b.ai.spd = (base + Math.random() * 40 - Math.min(8, b.r * 0.06)) * MOVE_SPEED_MULT;
+    b.ai._needSpd = false;
+  }
+}
+
+function aiStep(b, dt) {
+  if (!b.ai.tx) pickWaypoint(b);
+  b.ai.retarget -= dt;
+  const dx = b.ai.tx - b.x;
+  const dy = b.ai.ty - b.y;
+  const dist = Math.hypot(dx, dy);
+  if (b.ai.retarget <= 0 || dist < 28 + b.r * 0.3) pickWaypoint(b);
+
+  let wantAng = Math.atan2(dy, dx);
+  const margin = b.r + 36;
+  if (b.x < ARENA.x + margin) wantAng = lerpAngle(wantAng, 0, 0.5);
+  if (b.x > ARENA.x + ARENA.w - margin) wantAng = lerpAngle(wantAng, Math.PI, 0.5);
+  if (b.y < ARENA.y + margin) wantAng = lerpAngle(wantAng, Math.PI / 2, 0.5);
+  if (b.y > ARENA.y + ARENA.h - margin) wantAng = lerpAngle(wantAng, -Math.PI / 2, 0.5);
+
+  let da = wantAng - b.ai.ang;
+  while (da > Math.PI) da -= Math.PI * 2;
+  while (da < -Math.PI) da += Math.PI * 2;
+  const maxTurn = b.ai.maxTurn || 0.9;
+  da = clamp(da, -maxTurn * dt, maxTurn * dt);
+  b.ai.ang += da;
+
+  const cruise = Math.max(28 * MOVE_SPEED_MULT, b.ai.spd || 60 * MOVE_SPEED_MULT);
+  const wx = Math.cos(b.ai.ang) * cruise;
+  const wy = Math.sin(b.ai.ang) * cruise;
+  const blend = 1 - Math.exp(-2.2 * dt);
+  b.vx = lerp(b.vx, wx, blend);
+  b.vy = lerp(b.vy, wy, blend);
+
+  const spd = Math.hypot(b.vx, b.vy);
+  if (spd > 10) {
+    const travel = Math.atan2(b.vy, b.vx);
+    const want = travel + Math.PI;
+    let dBeet = want - b.beetleAng;
+    while (dBeet > Math.PI) dBeet -= Math.PI * 2;
+    while (dBeet < -Math.PI) dBeet += Math.PI * 2;
+    b.beetleAng += dBeet * Math.min(1, 5 * dt);
+    b.pushEffort = lerp(b.pushEffort, 0.35 + Math.min(0.55, spd / 200), 0.12);
+    b.squeeze = lerp(b.squeeze || 0, 0.4, 0.1);
+  } else {
+    b.pushEffort = lerp(b.pushEffort, 0.12, 0.08);
+  }
+}
+
+function volOf(r) { return (4 / 3) * Math.PI * r * r * r; }
+function rOfVol(v) { return Math.cbrt(Math.max(0, v) / ((4 / 3) * Math.PI)); }
+
+function growByVolume(b, eatenR, absorbRatio) {
+  const ratio = absorbRatio == null ? 1 : absorbRatio;
+  const isPlayer = b === player;
+  const cap = isPlayer ? 72 : 96;
+  const cur = b.targetR != null ? b.targetR : b.r;
+  const newV = volOf(cur) + volOf(eatenR) * ratio;
+  b.targetR = Math.min(cap, rOfVol(newV));
+  b.squash = 0.78;
+  b.stretch = 1.22;
+  b.squeeze = 1;
+  return b.targetR - cur;
+}
+
+function playerRadius() {
+  return player.targetR != null ? player.targetR : player.r;
+}
+
+/**
+ * Build the full ball roster once at level reset.
+ * Pacing = fixed ascending volume ladder + player growByVolume(ABSORB_RATIO).
+ * NPC radii never change after spawn (no runtime inflate).
+ *
+ * Single power-ease ladder on [R_MIN .. R_MAX], 51 balls, tiers by index band.
+ * Eat rule: player.r * 1.04 + eps >= b.r; player cap 72 → R_MAX 70 keeps finale clearable.
+ *
+ * Ascending-eat volume sim (ABSORB_RATIO=0.82, START_R=16):
+ *   kills  0 → player.r 16.00 → bigger 27
+ *   kills 13 (~25%) → player.r ~20.5 → bigger ~23
+ *   kills 26 (~50%) → player.r ~32.4 → bigger ~15  (≥8–12 required)
+ *   kills 38 (~75%) → player.r ~62.9 → bigger ~2
+ *   kills 51 → clear (never stuck)
+ */
+function buildInitialRadii() {
+  const TOTAL = SNACK_N + PACK_N + THREAT_N; // 51
+  const R_MIN = 7;
+  const R_MAX = 70; // must stay ≤ player cap 72 * 1.04 so last threats are edible
+  const POWER = 2.55; // steeper than linear → mass of volume in the late ladder
+  const out = [];
+  for (let i = 0; i < TOTAL; i++) {
+    const t = TOTAL <= 1 ? 0 : i / (TOTAL - 1);
+    // Volume-paced ease: early balls are snacks; mid/late stay ahead of absorbed volume until late.
+    const r = R_MIN + Math.pow(t, POWER) * (R_MAX - R_MIN);
+    let tier = 'snack';
+    if (i >= SNACK_N + PACK_N) tier = 'threat';
+    else if (i >= SNACK_N) tier = 'pack';
+    out.push({ r: Math.round(r * 10) / 10, tier });
+  }
+  return out;
+}
+
+/** Removed: runtime threat swelling. Kept as no-op so old call sites / assists stay harmless. */
+function pressureGrow(_dt) { /* no-op: NPC sizes fixed at spawn */ }
+
+/** Removed: feeding threats on player eat. */
+function feedThreatsFromKill(_eatenR) { /* no-op */ }
+
+/** Removed: mid-game spawn of artificially larger pressure balls. */
+function spawnPressureBall() { return false; }
+
+/** Removed: quota top-up of bigger-than-player balls. */
+function maintainPressure() { /* no-op */ }
+
+function eatFX(x, y, r, color) {
+  // Readable merge juice WITHOUT full-screen shake: suck crumbs → player, impact ring, soft hitstop
+  const toAng = Math.atan2(player.y - y, player.x - x);
+  const col = color || '#6a4a28';
+  const n = 10 + ((Math.min(14, r) / 3) | 0);
+  for (let i = 0; i < n; i++) {
+    const a = toAng + (Math.random() - 0.5) * 1.8;
+    const sp = 70 + Math.random() * 130;
+    particles.push({
+      x: x + (Math.random() - 0.5) * r * 0.4,
+      y: y + (Math.random() - 0.5) * r * 0.4,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      r: 1.8 + Math.random() * 4.2,
+      life: 0.32 + Math.random() * 0.28,
+      max: 0.65,
+      color: col,
+      suck: 1, // pull toward player while alive
+    });
+  }
+  // outer crumbs / dust bloom
+  for (let i = 0; i < 6; i++) {
+    const a = Math.random() * Math.PI * 2;
+    dust.push({
+      x, y, eat: true, r: 4 + Math.random() * 8, a: 0.5,
+      life: 0.28 + Math.random() * 0.22,
+      vx: Math.cos(a) * (40 + Math.random() * 70),
+      vy: Math.sin(a) * (40 + Math.random() * 70),
+    });
+  }
+  // expanding impact ring (world-space, not screen shake)
+  eatRings.push({
+    x, y,
+    r0: Math.max(8, r * 0.55),
+    r1: Math.max(28, r * 2.4 + player.r * 0.15),
+    life: 0.38, max: 0.38,
+    color: '210,170,100',
+  });
+  // ball-local feedback instead of camera trauma
+  player.squash = Math.min(player.squash, 0.72);
+  player.stretch = Math.max(player.stretch, 1.28);
+  hitStop = Math.max(hitStop, 0.04); // tiny readable freeze only
+}
+
+function separateCircles(a, b, pad) {
+  let dx = a.x - b.x, dy = a.y - b.y;
+  let d = Math.hypot(dx, dy);
+  const minD = a.r + b.r + (pad == null ? 3 : pad);
+  if (d < 1e-4) { dx = Math.cos(player.heading || 0); dy = Math.sin(player.heading || 0); d = 1; }
+  const nx = dx / d, ny = dy / d;
+  const push = minD - d;
+  if (push > 0) {
+    const aIsPlayer = a === player;
+    const wa = aIsPlayer ? 0.9 : 0.5;
+    const wb = 1 - wa;
+    a.x += nx * push * wa;
+    a.y += ny * push * wa;
+    b.x -= nx * push * wb;
+    b.y -= ny * push * wb;
+  }
+  return { nx, ny };
+}
+
+function bouncePlayerOff(b, nx, ny, lockT) {
+  let hx = Math.cos(player.heading), hy = Math.sin(player.heading);
+  const dot = hx * nx + hy * ny;
+  if (dot < 0.2) {
+    if (dot < 0) {
+      hx -= 2 * dot * nx;
+      hy -= 2 * dot * ny;
+    } else {
+      hx = nx; hy = ny;
+    }
+    const n = norm(hx, hy);
+    player.heading = Math.atan2(n.y, n.x);
+  } else {
+    const n = norm(hx + nx * 0.8, hy + ny * 0.8);
+    player.heading = Math.atan2(n.y, n.x);
+  }
+  input.aimX = Math.cos(player.heading);
+  input.aimY = Math.sin(player.heading);
+  player.steerLock = Math.max(player.steerLock, lockT == null ? 0.22 : lockT);
+
+  const s = cruiseSpeed();
+  player.vx = Math.cos(player.heading) * s;
+  player.vy = Math.sin(player.heading) * s;
+
+  b.vx -= nx * 55;
+  b.vy -= ny * 55;
+  if (b.ai) {
+    b.ai.ang = Math.atan2(-ny, -nx);
+    b.ai.retarget = Math.max(b.ai.retarget, 0.8);
+  }
+  player.squash = 0.88; player.stretch = 1.12;
+  b.squash = 0.9; b.stretch = 1.08;
+  player.bounceCD = 0.32;
+  b.bounceCD = 0.32;
+}
+
+function resolvePlayerBall(b) {
+  const d = Math.hypot(player.x - b.x, player.y - b.y);
+  const touch = player.r + b.r;
+  if (d >= touch) return null;
+
+  // Equal / up to ~4% larger → eat; clearly larger (>~4%) → die. No bounce-for-size band.
+  const SIZE_EPS = 1e-3;
+  if (player.r * 1.04 + SIZE_EPS >= b.r) return 'eat';
+  if (b.r > player.r * 1.04) return 'die';
+
+  // Tiny float edge only: separate without bounce impulse.
+  separateCircles(player, b, 4);
+  return null;
+}
+
+
+function easeInCubic(t) {
+  return t * t * t;
+}
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+/* ---- Death SFX (procedural WebAudio) ----
+ * Game-feel refs: layered impact + body thud; slight pitch variance ±8%.
+ * Style flavor: agar=sharp snap+thud; hole=long whoosh+thud; slither=pop cluster+thud.
+ */
+let _audioCtx = null;
+function ensureAudio() {
+  if(!presentation.sound)return null;
+  try {
+    if (!_audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      _audioCtx = new AC();
+    }
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  } catch (_) {}
+  return _audioCtx;
+}
+function _noiseBuffer(ctx, dur) {
+  const n = Math.max(1, (dur * ctx.sampleRate) | 0);
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+}
+function playDeathSFX(style) {
+  if(!presentation.sound)return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  const pitch = 1 + (Math.random() * 0.16 - 0.08); // ±8%
+
+  // (1) short noise burst / crunch
+  {
+    const dur = style === 'hole' ? 0.18 : (style === 'slither' ? 0.12 : 0.07);
+    const srcN = ctx.createBufferSource();
+    srcN.buffer = _noiseBuffer(ctx, dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = (style === 'agar' ? 1800 : style === 'hole' ? 420 : 1100) * pitch;
+    bp.Q.value = style === 'agar' ? 1.2 : 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(style === 'agar' ? 0.38 : 0.28, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    srcN.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    srcN.start(t0); srcN.stop(t0 + dur + 0.02);
+  }
+
+  // (2) low sine/triangle thud descending
+  {
+    const osc = ctx.createOscillator();
+    osc.type = style === 'agar' ? 'sine' : 'triangle';
+    const g = ctx.createGain();
+    const f0 = (style === 'hole' ? 110 : style === 'slither' ? 140 : 160) * pitch;
+    const f1 = f0 * (style === 'hole' ? 0.35 : 0.55);
+    const dur = style === 'hole' ? 0.55 : 0.28;
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.45, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  }
+
+  // (3) optional descending "fail" tone
+  {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    const g = ctx.createGain();
+    const f0 = (style === 'agar' ? 520 : style === 'hole' ? 380 : 640) * pitch;
+    const dur = style === 'hole' ? 0.7 : style === 'slither' ? 0.45 : 0.32;
+    osc.frequency.setValueAtTime(f0, t0 + 0.04);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(60, f0 * 0.28), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0 + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t0 + 0.04); osc.stop(t0 + dur + 0.02);
+  }
+
+  if (style === 'hole') {
+    // long descending whoosh (filtered noise sweep)
+    const dur = 0.9;
+    const srcN = ctx.createBufferSource();
+    srcN.buffer = _noiseBuffer(ctx, dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'lowpass';
+    bp.frequency.setValueAtTime(1400 * pitch, t0);
+    bp.frequency.exponentialRampToValueAtTime(120, t0 + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.22, t0 + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    srcN.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    srcN.start(t0); srcN.stop(t0 + dur + 0.02);
+  }
+
+  if (style === 'slither') {
+    // pop cluster
+    for (let i = 0; i < 5; i++) {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      const g = ctx.createGain();
+      const tt = t0 + 0.05 + i * 0.045;
+      const f = (380 + i * 55 + Math.random() * 40) * pitch;
+      osc.frequency.setValueAtTime(f, tt);
+      osc.frequency.exponentialRampToValueAtTime(f * 0.5, tt + 0.07);
+      g.gain.setValueAtTime(0.0001, tt);
+      g.gain.exponentialRampToValueAtTime(0.1, tt + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, tt + 0.08);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(tt); osc.stop(tt + 0.09);
+    }
+  }
+
+  if (style === 'agar') {
+    // sharp snap click
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    const g = ctx.createGain();
+    osc.frequency.setValueAtTime(900 * pitch, t0);
+    osc.frequency.exponentialRampToValueAtTime(180, t0 + 0.06);
+    g.gain.setValueAtTime(0.22, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.07);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0 + 0.08);
+  }
+}
+
+function playEatSFX(eatenR, eaterR) {
+  if(!presentation.sound)return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  const rel = clamp((eatenR || 10) / Math.max(10, eaterR || 20), 0.28, 1.35);
+  // bigger prey → lower / fuller gulp; tiny snacks → brighter chirp
+  const pitch = (0.78 + rel * 0.42) * (1 + (Math.random() * 0.1 - 0.05));
+
+  // (1) soft body thud
+  {
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    const g = ctx.createGain();
+    const f0 = 160 * pitch;
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(45, f0 * 0.45), t0 + 0.14);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.28 + rel * 0.12, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.16);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0 + 0.18);
+  }
+  // (2) short wet noise gulp
+  {
+    const dur = 0.09;
+    const srcN = ctx.createBufferSource();
+    srcN.buffer = _noiseBuffer(ctx, dur);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = (520 + rel * 380) * pitch;
+    bp.Q.value = 0.85;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.22 + rel * 0.1, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    srcN.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    srcN.start(t0); srcN.stop(t0 + dur + 0.02);
+  }
+  // (3) soft click / merge tick
+  {
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    const g = ctx.createGain();
+    const f = (420 + rel * 260) * pitch;
+    osc.frequency.setValueAtTime(f, t0 + 0.02);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.55, t0 + 0.08);
+    g.gain.setValueAtTime(0.0001, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.1, t0 + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t0 + 0.02); osc.stop(t0 + 0.1);
+  }
+}
+
+function finishDeathCinematic() {
+  if (!devour || devour.finished) return;
+  const pred = devour.predator;
+  const reason = devour.reason;
+  if (pred && !devour.absorbed) {
+    pred.r = devour.predBaseR;
+    pred.targetR = devour.predBaseR;
+    growByVolume(pred, devour.playerR0, 0.88);
+    devour.settleR = pred.targetR != null ? pred.targetR : pred.r;
+    devour.absorbed = true;
+  }
+  if (pred && devour.settleR != null) {
+    pred.r = devour.settleR;
+    pred.targetR = devour.settleR;
+    pred.squash = 1; pred.stretch = 1; pred.squeeze = 0.2;
+  }
+  player.r = 0.01;
+  player.targetR = 0.01;
+  player.hideBall = true;
+  devour.finished = true;
+  devour = null;
+  killPlayer(reason);
+}
+
+function spawnDeathPellets(cx, cy, baseR, count) {
+  // Longer-lived, bigger pellets so the burst reads clearly (~1.4s scatter)
+  const n = count || (12 + ((Math.random() * 6) | 0));
+  const pellets = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+    const speed = 55 + Math.random() * 95; // slower scatter
+    const pr = Math.max(3.5, baseR * (0.18 + Math.random() * 0.28));
+    pellets.push({
+      x: cx + Math.cos(a) * baseR * 0.12,
+      y: cy + Math.sin(a) * baseR * 0.12,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed,
+      r: pr,
+      life: 1.15 + Math.random() * 0.45,
+      max: 1.6,
+      settle: 0,
+      color: ['#4a3018', '#6a4420', '#3a2410', '#8a5a28', '#2a180c'][(Math.random() * 5) | 0],
+    });
+  }
+  return pellets;
+}
+
+function startDeathCinematic(predator, reason) {
+  beginPresentation('death',predator);
+  // branch on window.__deathStyle — agar / hole / slither (copied .io patterns, stretched)
+  /* Fail beat (calm formal): hitstop hold → death anim (slither pellets etc.)
+   * → soft desaturate + vignette wash (NO camera zoom, NO screen shake) → fail card.
+   * Layered death SFX still fire.
+   */
+  const style = (window.__deathStyle === 'hole' || window.__deathStyle === 'slither')
+    ? window.__deathStyle : 'agar';
+  state = 'devour';
+  ensureAudio();
+  const pr0 = Math.max(6, player.r);
+  const predR0 = Math.max(predator.r, predator.targetR != null ? predator.targetR : predator.r);
+  const contactAng = Math.atan2(player.y - predator.y, player.x - predator.x);
+
+  // Total cinematic before killPlayer overlay (includes 0.25s hitstop phase):
+  // agar ~1.7s | hole ~2.3s | slither ~2.0s
+  const durByStyle = { agar: 1.70, hole: 2.30, slither: 2.00 };
+  const HITSTOP = 0.25; // freeze sim, keep rendering
+  devour = {
+    t: 0,
+    dur: durByStyle[style],
+    hitstop: HITSTOP,
+    style: style,
+    predator: predator,
+    reason: reason || '眼没看清，撞上大家伙了。',
+    playerR0: pr0,
+    playerX0: player.x,
+    playerY0: player.y,
+    predR0: predR0,
+    predBaseR: predR0,
+    contactAng: contactAng,
+    absorbed: false,
+    crumbT: 0,
+    finished: false,
+    flashA: 0,
+    hidePlayer: false,
+    pellets: null,
+    pelletsSpawned: false,
+    claimFlash: 0,
+    camZ0: cam.z,
+    camX0: cam.x, // FAIL: lock frame — no whole-view slide toward death focus
+    camY0: cam.y,
+    camTargetZ: cam.z, // FAIL: no zoom-in (hold play camera scale)
+    settleR: null,
+    letterbox: 0,
+    outlinePulse: 0,
+    vignette: 0,
+    failWash: 0, // desaturate / darken progress 0→1
+  };
+
+  player.vx = 0; player.vy = 0;
+  player.boostT = 0;
+  player.pushEffort = 1;
+  player.squeeze = 1;
+  player.face = 'yeet';
+  player.hideBall = false;
+  player.deathTint = 0;
+  for (const b of balls) { b.vx = 0; b.vy = 0; }
+  predator.vx = 0; predator.vy = 0;
+  predator.targetR = predR0;
+
+  elHint.textContent = '';
+  elHint.classList.remove('pulse');
+
+  playDeathSFX(style);
+
+  // FAIL: no full-screen shake (reads low); presentation is wash + freeze + death anim
+  shake = 0;
+  hitStop = 0; // devour owns its own 250ms freeze (sim paused inside updateDevour)
+
+  if (style === 'agar') {
+    try { navigator.vibrate && navigator.vibrate([40, 60, 40, 80, 120]); } catch (_) {}
+  } else if (style === 'hole') {
+    try { navigator.vibrate && navigator.vibrate([50, 40, 70, 40, 90, 50, 140]); } catch (_) {}
+  } else {
+    // slither: hold player visible first; pellets spawn after hold phase
+    try { navigator.vibrate && navigator.vibrate([60, 30, 40, 30, 50, 40, 100]); } catch (_) {}
+  }
+}
+// keep old name for collision / helpers
+function startDevour(predator, reason) {
+  startDeathCinematic(predator, reason);
+}
+
+function deathFocusXY() {
+  // Bias camera toward player + contact with predator so beetle/ball stays large & readable
+  const pred = devour && devour.predator;
+  if (!pred) return { x: player.x, y: player.y };
+  return {
+    x: lerp(player.x, pred.x, 0.28),
+    y: lerp(player.y, pred.y, 0.28),
+  };
+}
+
+function updateDeathCamera(dt, u) {
+  // FAIL: lock camera XY + zoom at death start — whole frame must not slide/jitter
+  if (devour.camX0 != null) cam.x = devour.camX0;
+  if (devour.camY0 != null) cam.y = devour.camY0;
+  cam.z = devour.camZ0 != null ? devour.camZ0 : cam.z;
+  devour.letterbox = 0; // no cinematic bars on fail
+  devour.outlinePulse = 0.35 + 0.2 * Math.sin(devour.t * 5);
+  // Soft formal wash: desaturate + darken builds through the beat
+  devour.failWash = easeOutCubic(clamp(u / 0.5, 0, 1));
+  devour.vignette = 0.18 + devour.failWash * 0.55;
+}
+
+function updateDevour(dt) {
+  if (!devour || devour.finished) return;
+  const pred = devour.predator;
+  if (!pred || balls.indexOf(pred) < 0) {
+    devour.finished = true;
+    killPlayer(devour.reason);
+    devour = null;
+    return;
+  }
+
+  // Hitstop phase: freeze sim, keep rendering (camera eases in)
+  if (devour.t < devour.hitstop) {
+    devour.t += dt;
+    player.vx = 0; player.vy = 0;
+    player.boostT = 0;
+    for (const b of balls) { b.vx = 0; b.vy = 0; }
+    const u0 = clamp(devour.t / devour.dur, 0, 1);
+    updateDeathCamera(dt, u0);
+    shake = 0; // never shake during fail cinematic
+    // particles still drift a little so the freeze isn't sterile
+    for (const p of particles) {
+      p.life -= dt * 0.35; p.x += p.vx * dt * 0.15; p.y += p.vy * dt * 0.15;
+    }
+    particles = particles.filter(p => p.life > 0);
+    return; // stay frozen until next frames clear hitstop
+  }
+
+  devour.t += dt;
+  const u = clamp(devour.t / devour.dur, 0, 1);
+  const style = devour.style || 'agar';
+  const cineU = clamp((devour.t - devour.hitstop) / Math.max(0.01, devour.dur - devour.hitstop), 0, 1);
+
+  player.vx = 0; player.vy = 0;
+  player.boostT = 0;
+  for (const b of balls) { b.vx = 0; b.vy = 0; }
+
+  if (style === 'agar') {
+    updateDeathAgar(dt, u, cineU, pred);
+  } else if (style === 'hole') {
+    updateDeathHole(dt, u, cineU, pred);
+  } else {
+    updateDeathSlither(dt, u, cineU, pred);
+  }
+
+  updateDeathCamera(dt, u);
+  shake = 0; // fail presentation never uses full-screen shake
+
+  // shared particle / dust / pop bookkeeping
+  for (const p of particles) {
+    p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= 0.94; p.vy *= 0.94;
+  }
+  particles = particles.filter(p => p.life > 0);
+  if (particles.length > 64) particles.splice(0, particles.length - 64);
+  for (const d of dust) { d.life -= dt; d.x += d.vx * dt; d.y += d.vy * dt; d.a *= 0.94; }
+  dust = dust.filter(d => d.life > 0);
+  for (const t of popTexts) { t.life -= dt; t.y -= 36 * dt; }
+  popTexts = popTexts.filter(t => t.life > 0);
+
+  if (devour.pellets) {
+    for (const pel of devour.pellets) {
+      pel.life -= dt;
+      pel.vx *= 0.92;
+      pel.vy *= 0.92;
+      pel.vy += 28 * dt;
+      pel.x += pel.vx * dt;
+      pel.y += pel.vy * dt;
+      pel.settle = Math.min(1, (pel.settle || 0) + dt * 0.9);
+    }
+  }
+
+  if (devour.t >= devour.dur) {
+    finishDeathCinematic();
+  }
+}
+
+function updateDeathAgar(dt, u, cineU, pred) {
+  // Agar-inspired but STRETCHED (~1.7s total):
+  // hitstop → hold player clearly overlapped + pulsing red vignette → last ~0.25s snap absorb → overlay
+  const snapStart = devour.dur - 0.25;
+  const inSnap = devour.t >= snapStart;
+  const snapU = inSnap ? clamp((devour.t - snapStart) / 0.25, 0, 1) : 0;
+
+  // Hold: nudge player slightly into predator overlap so "being covered" reads
+  const holdPull = easeOutCubic(clamp(cineU / 0.55, 0, 1)) * 0.42;
+  if (!inSnap) {
+    player.x = lerp(devour.playerX0, pred.x, holdPull * 0.55);
+    player.y = lerp(devour.playerY0, pred.y, holdPull * 0.55);
+    player.r = devour.playerR0 * (1 + 0.06 * Math.sin(devour.t * 8)); // slight scale-up for clarity
+    player.targetR = player.r;
+    player.hideBall = false;
+    devour.hidePlayer = false;
+    player.face = 'yeet';
+    player.deathTint = 0;
+  }
+
+  // Pulsing red vignette through hold
+  devour.vignette = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(devour.t * 7));
+  devour.flashA = inSnap ? (0.55 + 0.45 * (1 - snapU)) : (0.12 + 0.1 * Math.sin(devour.t * 9));
+
+  if (inSnap) {
+    // Quick absorb/snap in last ~0.25s
+    const suck = easeInCubic(snapU);
+    player.x = lerp(player.x, pred.x, suck);
+    player.y = lerp(player.y, pred.y, suck);
+    player.r = Math.max(0.01, devour.playerR0 * (1 - suck));
+    player.targetR = player.r;
+    if (snapU > 0.55) {
+      devour.hidePlayer = true;
+      player.hideBall = true;
+    }
+    if (!devour.absorbed && snapU >= 0.35) {
+      pred.r = devour.predBaseR;
+      pred.targetR = devour.predBaseR;
+      growByVolume(pred, devour.playerR0, 0.88);
+      devour.settleR = pred.targetR != null ? pred.targetR : pred.r;
+      devour.absorbed = true;
+      pred.face = 'grin';
+      pred.squeeze = 0.15;
+    }
+    if (devour.absorbed && devour.settleR != null) {
+      const gu = easeOutCubic(clamp((snapU - 0.35) / 0.65, 0, 1));
+      pred.r = lerp(devour.predBaseR, devour.settleR, Math.min(1, 0.55 + gu * 0.45));
+      pred.targetR = devour.settleR;
+    }
+  } else {
+    pred.face = 'grin';
+    pred.squeeze = 0.25 + 0.15 * Math.sin(devour.t * 5);
+  }
+}
+
+function updateDeathHole(dt, u, cineU, pred) {
+  // Hole.io stretched (~2.3s): slow darken + pull; player visible/darkening most of the duration
+  // Keep player readable for first ~70% of cinematic, vanish only near the end
+  const suck = easeInCubic(cineU);
+  const spin = (devour.t - devour.hitstop) * 3.2; // slower spin than before
+  const spiral = (1 - suck) * devour.playerR0 * 0.42;
+
+  player.x = lerp(devour.playerX0, pred.x, suck) + Math.cos(spin) * spiral * (1 - suck);
+  player.y = lerp(devour.playerY0, pred.y, suck) + Math.sin(spin) * spiral * (1 - suck);
+  // Shrink slowly — stay large/clear until late
+  const sizeU = easeInCubic(clamp((cineU - 0.15) / 0.85, 0, 1));
+  player.r = Math.max(0.01, devour.playerR0 * (1 - sizeU) * (1 + 0.05 * (1 - cineU)));
+  player.targetR = player.r;
+  player.roll += dt * (5 + suck * 12);
+  player.deathTint = easeInOutCubic(cineU); // 0→1 darken
+  player.squash = 1 - 0.2 * suck;
+  player.stretch = 1 + 0.12 * suck;
+  // Never vanish in first 0.4s wall time; hide only when tiny near end
+  const canHide = devour.t >= 0.4 && player.r < Math.max(2.5, devour.playerR0 * 0.12);
+  player.hideBall = canHide;
+  devour.hidePlayer = canHide;
+  player.face = 'yeet';
+
+  const toPred = Math.atan2(pred.y - player.y, pred.x - player.x);
+  player.beetleAng = lerpAngle(player.beetleAng, toPred + Math.PI, Math.min(1, 6 * dt));
+
+  if (!devour.absorbed && cineU >= 0.45) {
+    pred.r = devour.predBaseR;
+    pred.targetR = devour.predBaseR;
+    growByVolume(pred, devour.playerR0, 0.88);
+    devour.settleR = pred.targetR != null ? pred.targetR : pred.r;
+    devour.absorbed = true;
+  }
+  const growU = easeOutCubic(clamp(cineU / 0.9, 0, 1));
+  const targetR = devour.absorbed && devour.settleR != null ? devour.settleR : devour.predBaseR;
+  pred.r = lerp(devour.predBaseR, targetR, growU);
+  pred.targetR = targetR;
+  pred.face = 'grin';
+  pred.pushEffort = 0.4 + 0.3 * Math.sin(devour.t * 4);
+  pred.squeeze = 0.2 + 0.25 * (1 - cineU);
+
+  devour.crumbT -= dt;
+  if (devour.crumbT <= 0) {
+    devour.crumbT = 0.04 + Math.random() * 0.04;
+    const ang = Math.atan2(player.y - pred.y, player.x - pred.x) + (Math.random() - 0.5) * 1.6;
+    const px = pred.x + Math.cos(ang) * (pred.r + 10 + Math.random() * 40);
+    const py = pred.y + Math.sin(ang) * (pred.r + 10 + Math.random() * 40);
+    const dx = pred.x - px, dy = pred.y - py;
+    const dn = Math.hypot(dx, dy) || 1;
+    const sp = 90 + Math.random() * 130;
+    particles.push({
+      x: px, y: py,
+      vx: (dx / dn) * sp,
+      vy: (dy / dn) * sp,
+      r: 1.2 + Math.random() * 3.5,
+      life: 0.28 + Math.random() * 0.3, max: 0.55,
+      color: ['#1a1008', '#0c0804', '#2a1a0c', '#000000'][(Math.random() * 4) | 0],
+    });
+    dust.push({
+      x: px, y: py, r: 5 + Math.random() * 10, a: 0.55,
+      life: 0.4,
+      vx: (dx / dn) * 70, vy: (dy / dn) * 70,
+    });
+  }
+  for (const p of particles) {
+    const dx = pred.x - p.x, dy = pred.y - p.y;
+    const dn = Math.hypot(dx, dy) || 1;
+    p.vx += (dx / dn) * 200 * dt;
+    p.vy += (dy / dn) * 200 * dt;
+  }
+
+  devour.vignette = 0.25 + cineU * 0.55;
+  // shake removed — fail uses wash/vignette only
+}
+
+function updateDeathSlither(dt, u, cineU, pred) {
+  // Slither stretched (~2.0s): brief clear hold on player → longer pellet burst → overlay
+  const holdEnd = 0.45; // seconds after hitstop before burst (player stays clear)
+  const holdT = devour.t - devour.hitstop;
+
+  if (holdT < holdEnd) {
+    player.hideBall = false;
+    devour.hidePlayer = false;
+    player.r = devour.playerR0 * (1 + 0.08 * Math.sin(devour.t * 9));
+    player.targetR = player.r;
+    player.x = devour.playerX0;
+    player.y = devour.playerY0;
+    player.face = 'yeet';
+    player.deathTint = 0;
+    devour.claimFlash = Math.max(devour.claimFlash, 0.25);
+  } else {
+    if (!devour.pelletsSpawned) {
+      devour.pelletsSpawned = true;
+      player.hideBall = true;
+      devour.hidePlayer = true;
+      player.r = 0.01;
+      player.targetR = 0.01;
+      devour.pellets = spawnDeathPellets(devour.playerX0, devour.playerY0, devour.playerR0, 14 + ((Math.random() * 5) | 0));
+      devour.claimFlash = 0.55; // soft pulse only — no full-screen flash spam
+      // absorb mass when body becomes food pile
+      if (!devour.absorbed) {
+        growByVolume(pred, devour.playerR0, 0.88);
+        devour.settleR = pred.targetR != null ? pred.targetR : pred.r;
+        devour.absorbed = true;
+        pred.r = lerp(devour.predBaseR, devour.settleR, 0.55);
+        pred.targetR = devour.settleR;
+      }
+    }
+  }
+
+  if (devour.claimFlash > 0) {
+    devour.claimFlash = Math.max(0, devour.claimFlash - dt * 1.4);
+  }
+
+  if (devour.settleR != null) {
+    const pulse = 1 + 0.05 * devour.claimFlash;
+    pred.r = devour.settleR * pulse;
+    pred.targetR = devour.settleR;
+    pred.squeeze = 0.15 + 0.35 * devour.claimFlash;
+    pred.face = 'grin';
+  }
+
+  // hold wash on pellet burst so scatter stays readable, then fail card
+  devour.vignette = 0.2 + cineU * 0.45;
+}
+
+
+function killPlayer(reason) {
+  state = 'dead';
+  deadMsg.textContent = '本来是来干饭的，结果成了别人的饭。';
+  fillResult('dead-stats',false);
+  ovDead.classList.remove('hidden');
+  try { navigator.vibrate && navigator.vibrate([40, 40, 80]); } catch (_) {}
+}
+
+function winGame() {
+  beginPresentation('win');
+  // short readable feast cinematic, then win card
+  const left = Math.max(0, timeLeft);
+  state = 'feast';
+  const ballR = Math.max(70, player.r * 1.15);
+  feast = {
+    t: 0,
+    dur: 4.2,
+    winLeft: left,
+    ballR: ballR,
+    ballR0: ballR,
+    jaw: 0,
+    phase: 'open',
+    phaseT: 0,
+    snapDone: false,
+    bites: [],
+    biteScallops: [],
+    captionI: 0,
+    contactAng: -Math.PI / 2,
+    orbit: 0,
+    mush: 0,
+    captions: ['开吃'],
+  };
+  // cinematic ball size (forceFeast / early win often leave player.r tiny)
+  player.r = feast.ballR;
+  player.targetR = feast.ballR;
+  player.vx = 0; player.vy = 0;
+  player.boostT = 0;
+  player.pushEffort = 0.6;
+  player.squeeze = 0.35;
+  player.stretch = 1;
+  player.squash = 1;
+  player.face = 'yeet';
+  elHint.textContent = '';
+  elHint.classList.remove('pulse');
+  elHud.classList.add('cinematic-hide');
+  elBarWrap.classList.add('cinematic-hide');
+  elBoostHint.classList.add('cinematic-hide');
+  elStick.classList.add('cinematic-hide');
+  elToast.classList.remove('show');
+  toastT = 0;
+  // caption is canvas-only during feast (avoid stacked DOM toast + title)
+  try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch (_) {}
+}
+
+function finishFeast() {
+  state = 'win';
+  const left = feast ? feast.winLeft : 0;
+  feast = null;
+  elToast.classList.remove('feast-toast');
+  winMsg.textContent = '吃到最后，连自己的球都没放过。';
+  fillResult('win-stats',true);
+  ovWin.classList.remove('hidden');
+  for (let i = 0; i < 10; i++) {
+    const a = Math.random() * Math.PI * 2;
+    particles.push({
+      x: player.x, y: player.y,
+      vx: Math.cos(a) * (30 + Math.random() * 70),
+      vy: Math.sin(a) * (30 + Math.random() * 70),
+      r: 2 + Math.random() * 4, life: 0.6 + Math.random() * 0.5, max: 1.1,
+      color: ['#5a3a1c', '#3a2814', '#8a5a28', '#2a1c10'][i % 4],
+    });
+  }
+}
+
+function feastMouthPos() {
+  if (!feast) return { x: player.x, y: player.y };
+  const ang = feast.contactAng;
+  const br = Math.max(feast.ballR || player.r, 12);
+  // jaws sit just outside ball rim (chunks fly ball→mouth ~0.35*ballR)
+  const dist = br * 0.92 + br * 0.35;
+  return {
+    x: player.x + Math.cos(ang) * dist,
+    y: player.y + Math.sin(ang) * dist,
+  };
+}
+
+function spawnFeastBite() {
+  if (!feast) return;
+  const ang = feast.contactAng;
+  const shrink = feast.ballR0 * (0.10 + Math.random() * 0.04);
+  feast.ballR = Math.max(12, feast.ballR - shrink);
+  player.r = feast.ballR;
+  player.targetR = feast.ballR;
+  player.roll += 0.2 + Math.random() * 0.15;
+  feast.biteScallops.push({ ang, depth: Math.max(6, shrink * 0.55) });
+  if (feast.biteScallops.length > 4) feast.biteScallops.shift();
+  const br = feast.ballR;
+  const mouth = feastMouthPos();
+  // spawn on ball rim; fly into mouth cavity over chew (~0.3s)
+  const sx = player.x + Math.cos(ang) * br * 0.92;
+  const sy = player.y + Math.sin(ang) * br * 0.92;
+  if (feast.bites.length < 3) {
+    feast.bites.push({
+      sx, sy,
+      ex: mouth.x,
+      ey: mouth.y,
+      x: sx,
+      y: sy,
+      r: 8 + Math.random() * 4,
+      life: 0.30,
+      max: 0.30,
+      u: 0,
+    });
+  }
+  // no screen shake on feast — local crumbs / squash / SFX only
+}
+
+function updateFeast(dt) {
+  if (!feast) return;
+  feast.t += dt;
+  feast.orbit += dt * 0.85;
+  feast.phaseT += dt;
+
+  const u = clamp(feast.t / feast.dur, 0, 1);
+  // beetle ABOVE ball, head on top contact (stable for readable chomp)
+  feast.contactAng = -Math.PI / 2;
+  player.beetleAng = feast.contactAng;
+  player.pushEffort = 0.7;
+  player.squeeze = 0.2 + feast.jaw * 0.25;
+  player.stretch = 1;
+  player.squash = 1;
+  player.vx = 0;
+  player.vy = 0;
+  // keep player.r in sync with cinematic ball
+  player.r = feast.ballR;
+  player.targetR = feast.ballR;
+
+  // camera: true close-up — z→3.35 in first ~0.35s; focus ball↔mouth
+  const mouth = feastMouthPos();
+  const focusX = lerp(player.x, mouth.x, 0.45);
+  const focusY = lerp(player.y, mouth.y, 0.45);
+  cam.x += (focusX - cam.x) * Math.min(1, 6.5 * dt);
+  cam.y += (focusY - cam.y) * Math.min(1, 6.5 * dt);
+  const zTarget = lerp(3.35, 2.95, feast.mush);
+  const zRate = feast.t < 0.35 ? 9 : 3.2;
+  cam.z += (zTarget - cam.z) * Math.min(1, zRate * dt);
+  if (shake > 0) shake = Math.max(0, shake - dt * 1.8);
+  else shake = 0;
+
+  const mushLate = u >= 0.85;
+  // bite cycle ~0.68s → ~5–6 bites before mush: open 0.18 + snap 0.1 + chew 0.30 + swallow 0.1
+  if (feast.phase === 'open') {
+    const d = mushLate ? 0.26 : 0.18;
+    const k = clamp(feast.phaseT / d, 0, 1);
+    feast.jaw = easeOutCubic(k);
+    if (feast.phaseT >= d) {
+      feast.phase = 'snap';
+      feast.phaseT = 0;
+      feast.snapDone = false;
+    }
+  } else if (feast.phase === 'snap') {
+    const d = 0.1;
+    const k = clamp(feast.phaseT / d, 0, 1);
+    feast.jaw = 1 - easeInCubic(k);
+    if (!feast.snapDone && feast.phaseT >= d * 0.28) {
+      feast.snapDone = true;
+      if (!mushLate || feast.ballR > 14) spawnFeastBite();
+    }
+    if (feast.phaseT >= d) {
+      feast.phase = 'chew';
+      feast.phaseT = 0;
+    }
+  } else if (feast.phase === 'chew') {
+    const d = mushLate ? 0.2 : 0.30;
+    feast.jaw = 0.18 * Math.abs(Math.sin(feast.phaseT * 20));
+    if (feast.phaseT >= d) {
+      feast.phase = 'swallow';
+      feast.phaseT = 0;
+    }
+  } else { // swallow
+    const d = 0.1;
+    feast.jaw = 0;
+    if (feast.phaseT >= d) {
+      feast.phase = 'open';
+      feast.phaseT = 0;
+      feast.snapDone = false;
+    }
+  }
+
+  // chunks: lerp ball rim → mouth over full chew duration (clear flight path)
+  const mpos = feastMouthPos();
+  for (const b of feast.bites) {
+    b.life -= dt;
+    b.u = 1 - Math.max(0, b.life) / b.max;
+    const t = easeOutCubic(clamp(b.u, 0, 1));
+    const sx = b.sx, sy = b.sy, ex = b.ex, ey = b.ey;
+    b.x = lerp(sx, ex, t);
+    b.y = lerp(sy, ey, t);
+    // slight sideways arc so path reads against ball
+    const px = -(ey - sy), py = (ex - sx);
+    const plen = Math.hypot(px, py) || 1;
+    const arc = Math.sin(t * Math.PI) * (feast.ballR0 * 0.06);
+    b.x += (px / plen) * arc;
+    b.y += (py / plen) * arc;
+    if (b.u >= 0.98 || b.life <= 0) {
+      b.life = 0;
+      dust.push({
+        x: mpos.x, y: mpos.y,
+        r: 5 + Math.random() * 5, a: 0.4, life: 0.24,
+        vx: (Math.random() - 0.5) * 28, vy: (Math.random() - 0.5) * 28,
+      });
+    }
+  }
+  feast.bites = feast.bites.filter(b => b.life > 0);
+
+  feast.captionI = 0;
+  feast.mush = clamp((u - 0.85) / 0.15, 0, 1);
+  if (feast.mush > 0) {
+    feast.ballR = Math.max(0, feast.ballR * (1 - 2.8 * dt));
+    player.r = feast.ballR;
+    player.targetR = feast.ballR;
+  }
+
+  for (const p of particles) {
+    p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= 0.96; p.vy *= 0.96; p.vy += 30 * dt;
+  }
+  particles = particles.filter(p => p.life > 0);
+  if (particles.length > 24) particles.splice(0, particles.length - 24);
+  for (const d of dust) { d.life -= dt; d.x += d.vx * dt; d.y += d.vy * dt; d.a *= 0.95; }
+  dust = dust.filter(d => d.life > 0);
+  for (const t of popTexts) { t.life -= dt; t.y -= 36 * dt; }
+  popTexts = popTexts.filter(t => t.life > 0);
+
+  if (feast.t >= feast.dur || feast.ballR < 8) {
+    player.r = Math.max(player.r, 8);
+    player.targetR = player.r;
+    finishFeast();
+  }
+}
+
+function timeOut() {
+  // Disabled: no time-limit fail. Kept as no-op for any stray callers.
+  console.warn('timeOut() ignored — clear time limit removed');
+}
+
+
+/** RECORDING ONLY — survival-first steer: flee threats before chasing safe edibles. */
+function runAutoWinBot() {
+  if (!window.__autoWinBot || state !== 'play') return;
+  const pr = player.r;
+  const DANGER_PAD = 100; // player.r + threat.r + ~90–110
+  const SAFE_PAD = 70;    // edible must stay clear of threats by edible.r + threat.r + 70
+
+  // Collect threats (larger than player) and find nearest.
+  let nearestThreat = null, nearestThreatD = Infinity;
+  const threats = [];
+  for (const b of balls) {
+    if (!(b.r > pr * 1.04)) continue;
+    const d = Math.hypot(b.x - player.x, b.y - player.y);
+    threats.push({ b, d });
+    if (d < nearestThreatD) { nearestThreatD = d; nearestThreat = b; }
+  }
+
+  let ax = 0, ay = 0;
+  let mode = 'wander';
+
+  // 1) SURVIVAL: if any threat within danger radius, aim directly away (ignore food).
+  if (nearestThreat) {
+    const dangerR = pr + nearestThreat.r + DANGER_PAD;
+    if (nearestThreatD < dangerR) {
+      ax = player.x - nearestThreat.x;
+      ay = player.y - nearestThreat.y;
+      mode = 'flee';
+      // Boost away if ready and threat is closing (dist decreasing) or already very close.
+      // d(dist^2)/dt ∝ (player-threat)·(player.v-threat.v); negative => closing.
+      const closingDot =
+        (player.x - nearestThreat.x) * (player.vx - (nearestThreat.vx || 0)) +
+        (player.y - nearestThreat.y) * (player.vy - (nearestThreat.vy || 0));
+      if ((closingDot < 0 || nearestThreatD < pr + nearestThreat.r + 50) &&
+          player.boostCD <= 0 && player.boostT <= 0) {
+        tryBoost(); // aimed away already — never boost into threat while fleeing
+      }
+    }
+  }
+
+  // 2) Else chase nearest SAFE edible (not near any threat).
+  if (mode !== 'flee') {
+    let edible = null, edibleD = Infinity;
+    for (const b of balls) {
+      if (!(pr * 1.04 + 1e-3 >= b.r)) continue;
+      let nearThreat = false;
+      for (const t of threats) {
+        const td = Math.hypot(b.x - t.b.x, b.y - t.b.y);
+        if (td < b.r + t.b.r + SAFE_PAD) { nearThreat = true; break; }
+      }
+      if (nearThreat) continue;
+      const d = Math.hypot(b.x - player.x, b.y - player.y);
+      if (d < edibleD) { edibleD = d; edible = b; }
+    }
+    if (edible) {
+      ax = edible.x - player.x;
+      ay = edible.y - player.y;
+      mode = 'chase';
+      const hx = Math.cos(player.heading), hy = Math.sin(player.heading);
+      const dist = Math.hypot(ax, ay) || 1;
+      const ahead = (ax * hx + ay * hy) / dist;
+      // Never boost into a threat: only boost toward edible when no threat is ahead/near path.
+      let threatOnPath = false;
+      for (const t of threats) {
+        // project threat onto aim ray; reject if within strip near path
+        const tx = t.b.x - player.x, ty = t.b.y - player.y;
+        const along = (tx * ax + ty * ay) / dist;
+        if (along < 0 || along > dist + 40) continue;
+        const perp = Math.abs(tx * (-ay / dist) + ty * (ax / dist));
+        if (perp < pr + t.b.r + 40) { threatOnPath = true; break; }
+      }
+      if (!threatOnPath && dist >= 100 && dist <= 220 && ahead > 0.55) tryBoost();
+    }
+  }
+
+  // 3) No safe edible: wander toward map center, biased away from densest threats.
+  if (mode === 'wander') {
+    const cx = ARENA.x + ARENA.w * 0.5;
+    const cy = ARENA.y + ARENA.h * 0.5;
+    ax = cx - player.x;
+    ay = cy - player.y;
+    if (threats.length) {
+      let sx = 0, sy = 0;
+      for (const t of threats) {
+        const w = 1 / Math.max(40, t.d);
+        sx += (player.x - t.b.x) * w;
+        sy += (player.y - t.b.y) * w;
+      }
+      ax += sx * 180;
+      ay += sy * 180;
+    }
+  }
+
+  const n = Math.hypot(ax, ay);
+  if (n > 1e-6) {
+    input.aimX = ax / n;
+    input.aimY = ay / n;
+  }
+}
+
+function update(dt) {
+  if (toastT > 0) {
+    toastT -= dt;
+    if (toastT <= 0) elToast.classList.remove('show');
+  }
+  if (state === 'feast') {
+    updateComedyWin(dt);
+    return;
+  }
+  if (state === 'devour') {
+    updateComedyDeath(dt);
+    return;
+  }
+  if (state !== 'play') {
+    for (const p of particles) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.98; p.vy *= 0.98; }
+    particles = particles.filter(p => p.life > 0);
+    return;
+  }
+
+  if (hitStop > 0) { hitStop -= dt; return; }
+  time += dt;
+  // No clear time limit — win by clearing all balls only.
+  // timeLeft kept for debug/compat but never counts down or fails the run.
+  timeLeft = Infinity;
+  if (player.invuln > 0) player.invuln -= dt;
+  if (shake > 0) shake = Math.max(0, shake - dt * 3);
+
+  runAutoWinBot();
+  applyPlayerInput(dt);
+  integrateBall(player, dt, true);
+  player.face = player.boostT > 0 ? 'yeet' : (player.pushEffort > 0.55 ? 'push' : 'focus');
+
+  for (const b of balls) {
+    aiStep(b, dt);
+    integrateBall(b, dt, false);
+    b.face = Math.hypot(b.vx, b.vy) > 120 ? 'grin' : 'neutral';
+  }
+
+  if (player.bounceCD > 0) player.bounceCD -= dt;
+  for (const b of balls) {
+    if (b.bounceCD > 0) b.bounceCD -= dt;
+  }
+
+  for (let i = balls.length - 1; i >= 0; i--) {
+    const b = balls[i];
+    const res = resolvePlayerBall(b);
+    if (res === 'eat') {
+      queueEatVisual(b); // visual snapshot only; collision and growth still resolve immediately
+      const eatenR = b.r;
+      const beforeR = playerRadius();
+      const dR = growByVolume(player, eatenR, ABSORB_RATIO);
+      eatFX(b.x, b.y, eatenR, '#6a4a28');
+      playEatSFX(eatenR, beforeR);
+      const gain = Math.max(1, Math.round(dR));
+      popTexts.push({
+        x: b.x, y: b.y - b.r - 6,
+        text: '+' + gain + ' 体积',
+        life: 0.85, max: 0.85,
+      });
+      showToast(pickEatLine(), 0.65);
+      balls.splice(i, 1);
+      kills++;
+      updateHUD();
+      try { navigator.vibrate && navigator.vibrate(10); } catch (_) {}
+      if (balls.length === 0) {
+        updateHUD();
+        winGame();
+        return;
+      }
+    } else if (res === 'die') {
+      // RECORDING ONLY: when __clearAssist, treat would-be death as bounce/separate
+      // so a clear-all victory tape is reachable. Defaults leave this off (hard die).
+      if (window.__clearAssist || player.invuln > 0 || (player.bounceCD || 0) > 0) {
+        const sep = separateCircles(player, b, 5);
+        if ((player.bounceCD || 0) <= 0) {
+          bouncePlayerOff(b, sep.nx, sep.ny, 0.3);
+        } else {
+          const hx = Math.cos(player.heading), hy = Math.sin(player.heading);
+          if (hx * sep.nx + hy * sep.ny < 0.25) {
+            player.heading = Math.atan2(sep.ny, sep.nx);
+            input.aimX = sep.nx; input.aimY = sep.ny;
+            const s = cruiseSpeed();
+            player.vx = sep.nx * s; player.vy = sep.ny * s;
+          }
+        }
+        continue;
+      }
+      // suck-into-belly cinematic, then dead overlay
+      startDevour(b, '眼没看清，撞上大家伙了。');
+      return;
+    }
+  }
+
+  // Bias look slightly north (ahead of constant-speed push) and clamp so the canvas
+  // is filled with arena, not a south-wall brown dead band that steals mouse aim.
+  const sc = viewScale();
+  const viewW = vw / Math.max(1e-6, sc);
+  const viewH = vh / Math.max(1e-6, sc);
+  let tx = player.x;
+  let ty = player.y - Math.min(120, viewH * 0.12);
+  const pad = 24;
+  const minCx = ARENA.x + viewW * 0.5 - pad;
+  const maxCx = ARENA.x + ARENA.w - viewW * 0.5 + pad;
+  const minCy = ARENA.y + viewH * 0.5 - pad;
+  const maxCy = ARENA.y + ARENA.h - viewH * 0.5 + pad;
+  if (minCx <= maxCx) tx = clamp(tx, minCx, maxCx);
+  else tx = ARENA.x + ARENA.w * 0.5;
+  if (minCy <= maxCy) ty = clamp(ty, minCy, maxCy);
+  else ty = ARENA.y + ARENA.h * 0.5;
+  cam.x += (tx - cam.x) * Math.min(1, 4.5 * dt);
+  cam.y += (ty - cam.y) * Math.min(1, 4.5 * dt);
+  let wantZ = player.r > 40 ? 0.92 : 1;
+  // boost: no FOV/zoom punch — keep cam.z size-based only
+  cam.z += (wantZ - cam.z) * Math.min(1, 2 * dt);
+
+  for (const p of particles) {
+    p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= 0.96; p.vy *= 0.96;
+    if (p.suck) {
+      const dx = player.x - p.x, dy = player.y - p.y;
+      const dn = Math.hypot(dx, dy) || 1;
+      p.vx += (dx / dn) * 420 * dt;
+      p.vy += (dy / dn) * 420 * dt;
+    }
+  }
+  particles = particles.filter(p => p.life > 0);
+  if (particles.length > 48) particles.splice(0, particles.length - 48);
+  for (const m of marks) m.life -= dt;
+  marks = marks.filter(m => m.life > 0);
+  for (const er of eatRings) er.life -= dt;
+  eatRings = eatRings.filter(er => er.life > 0);
+  for (const t of popTexts) { t.life -= dt; t.y -= 34 * dt; }
+  popTexts = popTexts.filter(t => t.life > 0);
+
+  if (player.pushEffort > 0.45 && Math.random() < dt * 8) {
+    const ang = player.beetleAng;
+    dust.push({
+      x: player.x + Math.cos(ang) * (player.r + 8),
+      y: player.y + Math.sin(ang) * (player.r + 8),
+      r: 3 + Math.random() * 5, a: 0.4, life: 0.4,
+      vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40,
+    });
+  }
+  // continuous boost trail (visual only)
+  if (player.boostT > 0) {
+    const back = player.heading + Math.PI;
+    const nDust = Math.max(1, (dt * 90) | 0);
+    for (let i = 0; i < nDust; i++) {
+      const spr = (Math.random() - 0.5) * 0.9;
+      dust.push({
+        x: player.x + Math.cos(back + spr) * player.r * (0.5 + Math.random() * 0.7),
+        y: player.y + Math.sin(back + spr) * player.r * (0.5 + Math.random() * 0.7),
+        r: 6 + Math.random() * 14, a: 0.7, life: 0.3 + Math.random() * 0.28,
+        vx: Math.cos(back + spr) * (80 + Math.random() * 140) + (Math.random() - 0.5) * 70,
+        vy: Math.sin(back + spr) * (80 + Math.random() * 140) + (Math.random() - 0.5) * 70,
+      });
+    }
+    if (Math.random() < dt * 22) {
+      boostGhosts.push({
+        x: player.x, y: player.y, r: player.r * (0.92 + Math.random() * 0.1),
+        heading: player.heading, life: 0.26, max: 0.26,
+      });
+    }
+  }
+  for (const g of boostGhosts) g.life -= dt;
+  boostGhosts = boostGhosts.filter(g => g.life > 0);
+  if (boostGhosts.length > 10) boostGhosts.splice(0, boostGhosts.length - 10);
+  for (const d of dust) { d.life -= dt; d.x += d.vx * dt; d.y += d.vy * dt; d.a *= 0.96; }
+  dust = dust.filter(d => d.life > 0);
+  if (dust.length > 64) dust.splice(0, dust.length - 64);
+
+  if (((time * 8) | 0) !== (((time - dt) * 8) | 0) || balls.length === 0) updateHUD();
+}
+
+function pickEatLine() {
+  const lines = ['吞下', '体积上来了', '再滚', '这颗归我', '清场中', '差点反吃'];
+  return lines[(Math.random() * lines.length) | 0];
+}
+
+function worldTransform() {
+  const scale = viewScale();
+  // Never translate the whole view for juice (no screen shake / trauma shift).
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.translate(vw / 2, vh / 2);
+  ctx.scale(scale, scale);
+  ctx.translate(-cam.x, -cam.y);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawBackground() {
+  ctx.drawImage(texDirt, -100, -100, W + 200, H + 200);
+  ctx.save();
+  roundRect(ARENA.x, ARENA.y, ARENA.w, ARENA.h, 28);
+  ctx.strokeStyle = 'rgba(60,42,24,0.85)';
+  ctx.lineWidth = 14;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(160,120,70,0.35)';
+  ctx.lineWidth = 2.5;
+  roundRect(ARENA.x + 5, ARENA.y + 5, ARENA.w - 10, ARENA.h - 10, 24);
+  ctx.stroke();
+  ctx.restore();
+  const mMax = Math.min(marks.length, 14);
+  for (let i = marks.length - mMax; i < marks.length; i++) {
+    const m = marks[i];
+    ctx.globalAlpha = 0.4 * (m.life / 2.2);
+    ctx.drawImage(texWet, m.x - m.r, m.y - m.r * 0.55, m.r * 2, m.r * 1.1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+const _palCache = new Map();
+function dungPalette(seed) {
+  let pal = _palCache.get(seed);
+  if (pal) return pal;
+  const rng = mulberry32(seed);
+  const hueShift = rng() * 14 - 4;
+  const base = [
+    68 + hueShift + rng() * 14,
+    42 + hueShift * 0.5 + rng() * 9,
+    22 + rng() * 7
+  ];
+  // Stronger value range so offset-radial spheres read at a glance (Agar-style)
+  pal = {
+    base,
+    dark: [base[0] * 0.16, base[1] * 0.14, base[2] * 0.11],
+    mid: [base[0] * 0.55, base[1] * 0.52, base[2] * 0.45],
+    light: [Math.min(175, base[0] + 52), Math.min(130, base[1] + 38), Math.min(78, base[2] + 24)],
+    wet: [Math.min(150, base[0] + 36), Math.min(108, base[1] + 26), Math.min(62, base[2] + 16)],
+    sss: [Math.min(200, base[0] + 70), Math.min(130, base[1] + 28), Math.min(70, base[2] + 8)],
+    hi: [Math.min(235, base[0] + 110), Math.min(210, base[1] + 100), Math.min(160, base[2] + 70)],
+  };
+  _palCache.set(seed, pal);
+  return pal;
+}
+
+function rgb(c, a) {
+  if (a == null) return `rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  return `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+}
+
+function drawDungBall(b, lod) {
+  if (lod == null) lod = b === player ? 2 : (b.r >= 26 ? 1 : 0);
+  const seedN = b.seed || 1;
+  const picked = pickDungAtlas(seedN, b.r);
+  if (!picked) {
+    drawDungBallProcedural(b, lod);
+    return;
+  }
+
+  const { x, y, r, roll } = b;
+  const sq = b.squeeze || 0;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale((b.stretch || 1) * (1 + sq * 0.06), (b.squash || 1) * (1 - sq * 0.08));
+
+  // 1) Soft elliptical ground shadow
+  ctx.beginPath();
+  ctx.ellipse(r * 0.06, r * 0.82, r * 0.92, r * 0.30, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.40)';
+  ctx.fill();
+
+  // 2–4) Clip circle → photo texture (rotated by roll) → matte sphere lighting
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.clip();
+
+  ctx.save();
+  ctx.rotate(roll || 0);
+  const tw = r * 2.2;
+  ctx.drawImage(picked.atlas, -tw / 2, -tw / 2, tw, tw);
+  ctx.restore();
+
+  // Soft lighting pass ON TOP of photo (matte fibrous dung — not glossy marble)
+  // Upper-left lighten + lower-right darken via offset radial
+  const hx = -r * 0.30, hy = -r * 0.36;
+  const shade = ctx.createRadialGradient(hx, hy, r * 0.06, r * 0.20, r * 0.26, r * 1.08);
+  shade.addColorStop(0, 'rgba(255,242,210,0.20)');
+  shade.addColorStop(0.28, 'rgba(255,230,190,0.07)');
+  shade.addColorStop(0.55, 'rgba(0,0,0,0)');
+  shade.addColorStop(0.82, 'rgba(0,0,0,0.18)');
+  shade.addColorStop(1, lod >= 2 ? 'rgba(0,0,0,0.42)' : 'rgba(0,0,0,0.34)');
+  ctx.fillStyle = shade;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rim AO
+  const ao = ctx.createRadialGradient(hx * 0.4, hy * 0.4, r * 0.45, 0, 0, r);
+  ao.addColorStop(0, 'rgba(0,0,0,0)');
+  ao.addColorStop(0.62, 'rgba(0,0,0,0)');
+  ao.addColorStop(0.85, 'rgba(0,0,0,0.10)');
+  ao.addColorStop(1, lod >= 2 ? 'rgba(0,0,0,0.36)' : 'rgba(0,0,0,0.28)');
+  ctx.fillStyle = ao;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // VERY soft matte sheen; tiny wet sheen only on crop-02 (idx 1)
+  if (lod >= 1) {
+    const sx = -r * 0.26, sy = -r * 0.32;
+    const wet = picked.idx === 1;
+    const spec = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * (wet ? 0.30 : 0.34));
+    if (wet) {
+      spec.addColorStop(0, 'rgba(255,248,230,0.26)');
+      spec.addColorStop(0.40, 'rgba(230,200,150,0.10)');
+      spec.addColorStop(1, 'rgba(200,160,90,0)');
+    } else {
+      spec.addColorStop(0, 'rgba(255,245,220,0.11)');
+      spec.addColorStop(0.45, 'rgba(220,190,140,0.045)');
+      spec.addColorStop(1, 'rgba(200,160,90,0)');
+    }
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, r * (wet ? 0.28 : 0.30), r * (wet ? 0.18 : 0.20), -0.4, 0, Math.PI * 2);
+    ctx.fillStyle = spec;
+    ctx.fill();
+  }
+  ctx.restore(); // end clip
+
+  // Rim + player warm outline/halo
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  if (b === player) {
+    ctx.strokeStyle = 'rgba(8,5,2,0.95)';
+    ctx.lineWidth = Math.max(2.8, r * 0.09);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.03, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(236,205,120,0.85)';
+    ctx.lineWidth = Math.max(2.0, r * 0.06);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.12, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200,165,90,0.35)';
+    ctx.lineWidth = Math.max(1.6, r * 0.04);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.22, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(210,175,100,0.16)';
+    ctx.lineWidth = Math.max(2.5, r * 0.08);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = 'rgba(20,10,4,0.75)';
+    ctx.lineWidth = Math.max(1.1, r * 0.038);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+
+function drawDungBallProcedural(b, lod) {
+  if (lod == null) lod = b === player ? 2 : (b.r >= 26 ? 1 : 0);
+  const { x, y, r, roll, seed } = b;
+  const pal = dungPalette(seed || 1);
+  const sq = b.squeeze || 0;
+  const seedN = seed || 1;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale((b.stretch || 1) * (1 + sq * 0.06), (b.squash || 1) * (1 - sq * 0.08));
+
+  // 1) Soft elliptical ground shadow (Agar-style)
+  ctx.beginPath();
+  ctx.ellipse(r * 0.06, r * 0.82, r * 0.92, r * 0.30, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.40)';
+  ctx.fill();
+
+  // Perfect circle body path (mild ≤3% jitter only on large LOD for dung character)
+  const useJitter = lod >= 2 && r >= 28;
+  const bumps = useJitter ? 24 : 0;
+  function ballPath() {
+    ctx.beginPath();
+    if (!useJitter) {
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      return;
+    }
+    for (let i = 0; i <= bumps; i++) {
+      const a = (i / bumps) * Math.PI * 2;
+      const jitter = 1 + Math.sin(a * 2.5 + (seedN % 9)) * 0.025 + Math.sin(a * 4 + seedN * 0.01) * 0.012;
+      const px = Math.cos(a) * r * jitter, py = Math.sin(a) * r * jitter;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  // 2) Offset radial: light upper-left → base → mid → dark lower-right rim
+  const hx = -r * 0.35, hy = -r * 0.40;
+  ballPath();
+  const g = ctx.createRadialGradient(hx, hy, r * 0.08, r * 0.18, r * 0.22, r * 1.05);
+  g.addColorStop(0, rgb(pal.light));
+  g.addColorStop(0.28, rgb(pal.base));
+  g.addColorStop(0.62, rgb(pal.mid));
+  g.addColorStop(1, rgb(pal.dark));
+  ctx.fillStyle = g;
+  ctx.fill();
+
+  // Texture / mottles / roll seams UNDER lighting (clip to ball)
+  if (lod >= 1) {
+    ctx.save();
+    ballPath();
+    ctx.clip();
+    ctx.rotate(roll);
+    const mottles = lod >= 2 ? 6 : 3;
+    for (let i = 0; i < mottles; i++) {
+      const a = ((seedN * (i + 3)) % 628) / 100;
+      const d = r * (0.15 + ((seedN >> (i % 8)) & 7) * 0.06);
+      const sr = r * (0.18 + (i % 3) * 0.07);
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * d, Math.sin(a) * d, sr, sr * 0.6, a, 0, Math.PI * 2);
+      ctx.fillStyle = i & 1 ? 'rgba(18,10,4,0.18)' : 'rgba(150,110,55,0.10)';
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(25,14,6,0.28)';
+    ctx.lineWidth = Math.max(1.0, r * 0.05);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < (lod >= 2 ? 4 : 2); i++) {
+      const y0 = -r * 0.4 + i * r * 0.28;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.7, y0);
+      ctx.quadraticCurveTo(0, y0 + r * 0.06, r * 0.65, y0);
+      ctx.stroke();
+    }
+    if (lod >= 2 && r >= 22 && texDungNoise) {
+      ctx.globalAlpha = 0.18;
+      ctx.globalCompositeOperation = 'multiply';
+      const tw = r * 2.4;
+      ctx.drawImage(texDungNoise, -tw / 2, -tw / 2, tw, tw);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  } else {
+    // lod0: single soft roll seam for motion read
+    ctx.save();
+    ctx.rotate(roll);
+    ctx.strokeStyle = 'rgba(25,14,6,0.28)';
+    ctx.lineWidth = Math.max(1, r * 0.055);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.55, -0.8, 0.8);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 3) Soft AO ring near rim (darken edge) — clip so it stays on ball
+  ctx.save();
+  ballPath();
+  ctx.clip();
+  const ao = ctx.createRadialGradient(hx * 0.55, hy * 0.55, r * 0.35, 0, 0, r);
+  ao.addColorStop(0, 'rgba(0,0,0,0)');
+  ao.addColorStop(0.55, 'rgba(0,0,0,0)');
+  ao.addColorStop(0.82, 'rgba(0,0,0,0.12)');
+  ao.addColorStop(1, lod >= 2 ? 'rgba(0,0,0,0.42)' : 'rgba(0,0,0,0.34)');
+  ctx.fillStyle = ao;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Soft secondary diffuse oval (warm, under specular)
+  ctx.beginPath();
+  ctx.ellipse(-r * 0.22, -r * 0.28, r * 0.38, r * 0.26, -0.4, 0, Math.PI * 2);
+  ctx.fillStyle = lod >= 2 ? 'rgba(210,170,100,0.16)' : 'rgba(190,145,80,0.12)';
+  ctx.fill();
+
+  // 4) Specular AFTER texture — sharp cream highlight + tiny bright core
+  const sx = -r * 0.32, sy = -r * 0.38;
+  const sr = r * (lod === 0 ? 0.20 : 0.22);
+  const spec = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+  spec.addColorStop(0, 'rgba(255,248,230,0.78)');
+  spec.addColorStop(0.35, 'rgba(255,235,190,0.38)');
+  spec.addColorStop(0.7, 'rgba(230,190,120,0.10)');
+  spec.addColorStop(1, 'rgba(200,160,90,0)');
+  ctx.beginPath();
+  ctx.ellipse(sx, sy, sr, sr * 0.72, -0.45, 0, Math.PI * 2);
+  ctx.fillStyle = spec;
+  ctx.fill();
+  // tiny bright core
+  ctx.beginPath();
+  ctx.ellipse(sx - r * 0.02, sy - r * 0.02, r * 0.07, r * 0.05, -0.4, 0, Math.PI * 2);
+  ctx.fillStyle = lod >= 1 ? 'rgba(255,252,245,0.72)' : 'rgba(255,252,245,0.55)';
+  ctx.fill();
+
+  if (lod >= 2) {
+    // secondary soft specular (lower alpha)
+    const s2x = -r * 0.08, s2y = -r * 0.18;
+    const s2 = ctx.createRadialGradient(s2x, s2y, 0, s2x, s2y, r * 0.28);
+    s2.addColorStop(0, 'rgba(255,230,180,0.18)');
+    s2.addColorStop(1, 'rgba(255,220,160,0)');
+    ctx.beginPath();
+    ctx.ellipse(s2x, s2y, r * 0.28, r * 0.16, 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = s2;
+    ctx.fill();
+  }
+  ctx.restore(); // end clip
+
+  // Rim stroke + player identity outline (after specular so it stays readable)
+  ballPath();
+  if (b === player) {
+    ctx.strokeStyle = 'rgba(8,5,2,0.95)';
+    ctx.lineWidth = Math.max(2.8, r * 0.09);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.03, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(236,205,120,0.85)';
+    ctx.lineWidth = Math.max(2.0, r * 0.06);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.12, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200,165,90,0.35)';
+    ctx.lineWidth = Math.max(1.6, r * 0.04);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.22, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(210,175,100,0.16)';
+    ctx.lineWidth = Math.max(2.5, r * 0.08);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = 'rgba(20,10,4,0.75)';
+    ctx.lineWidth = Math.max(1.1, r * 0.038);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+
+function drawBeetle(px, py, pr, ang, effort, squeeze, simple, animationTime) {
+  if (simple && pr < 18) {
+    const dist = pr + 12;
+    const bx = px + Math.cos(ang) * dist;
+    const by = py + Math.sin(ang) * dist;
+    const sc = Math.max(0.55, pr / 22);
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(ang + Math.PI / 2);
+    ctx.scale(sc, sc);
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 7, 9, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a2410';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(0, -5, 5, 4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#243018';
+    ctx.fill();
+    ctx.strokeStyle = '#12180c';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-4, -7); ctx.lineTo(-6, -12);
+    ctx.moveTo(4, -7); ctx.lineTo(6, -12);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  const press = (squeeze || 0) * 0.55 + effort * 0.35;
+  const dist = pr + (simple ? 15 : 20) - press * (simple ? 5 : 9) + (1 - effort) * 4;
+  const bx = px + Math.cos(ang) * dist;
+  const by = py + Math.sin(ang) * dist;
+  const scale = simple
+    ? Math.max(0.7, Math.min(1.35, pr / 28))
+    : Math.max(1.25, Math.min(2.0, pr / 18));
+  const lean = 0.22 + effort * 0.28 + (squeeze || 0) * 0.18;
+
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(ang + Math.PI / 2);
+  ctx.rotate(-lean * 0.4);
+  ctx.scale(scale * (1 + (squeeze || 0) * 0.05), scale * (1 - (squeeze || 0) * 0.1));
+
+  // ground contact shadow
+  ctx.beginPath();
+  ctx.ellipse(0, simple ? 11 : 15, simple ? 10 : 14, simple ? 3.2 : 5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fill();
+
+  const gait = (animationTime == null ? time : animationTime) * (9 + effort * 14);
+
+  // --- legs (draw under body) ---
+  function leg(side, ly, len, swingPhase, front) {
+    const swing = Math.sin(gait + swingPhase) * (front ? 2.5 + effort * 3 : 4.5 + effort * 5);
+    const reach = front ? (-16 - effort * 7 - (squeeze || 0) * 5) : (6 + Math.abs(swing) * 0.4);
+    ctx.strokeStyle = '#1a140c';
+    ctx.lineWidth = simple ? 2 : 2.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // femur
+    const jx = side * (front ? 5 : 7);
+    const jy = ly;
+    const mx = side * (front ? 8 + effort * 2 : 14);
+    const my = front ? reach * 0.4 + swing * 0.3 : ly + swing * 0.35;
+    const tx = side * (front ? (3 + swing * 0.25) : (18 + Math.abs(swing) * 0.4));
+    const ty = front ? reach : ly + 5 + swing;
+    ctx.beginPath();
+    ctx.moveTo(jx, jy);
+    ctx.lineTo(mx, my);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    // claw
+    if (!simple) {
+      ctx.fillStyle = '#0e0a06';
+      ctx.beginPath();
+      ctx.arc(tx, ty, front ? 2.0 : 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      if (front) {
+        // contact spark / dirt when pushing hard
+        if (effort > 0.7) {
+          ctx.fillStyle = `rgba(90,70,40,${0.3 * effort})`;
+          ctx.beginPath();
+          ctx.arc(tx, ty - 2, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  // front pair braced into ball
+  leg(-1, -3, 1, 0, true);
+  leg(1, -3, 1, Math.PI, true);
+  // mid
+  leg(-1, 4, 1, 1.2, false);
+  leg(1, 4, 1, 1.2 + Math.PI, false);
+  // hind
+  leg(-1, 11, 1, 2.4, false);
+  leg(1, 11, 1, 2.4 + Math.PI, false);
+
+  // --- abdomen / elytra (metallic dark bronze) ---
+  const elyH = (simple ? 12 : 15) - effort * 1.2;
+  const ely = ctx.createLinearGradient(-10, 0, 12, 18);
+  ely.addColorStop(0, '#3a4a28');
+  ely.addColorStop(0.25, '#243018');
+  ely.addColorStop(0.55, '#182010');
+  ely.addColorStop(0.8, '#101408');
+  ely.addColorStop(1, '#0a0c06');
+  ctx.beginPath();
+  ctx.ellipse(0, 7, simple ? 8 : 11.5, elyH, 0, 0, Math.PI * 2);
+  ctx.fillStyle = ely;
+  ctx.fill();
+
+  // carapace seam
+  ctx.beginPath();
+  ctx.moveTo(0, -1);
+  ctx.lineTo(0, 7 + elyH - 1);
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // iridescent specular on elytra
+  ctx.beginPath();
+  ctx.ellipse(-4.5, 2, simple ? 3 : 4.5, simple ? 5 : 7, -0.25, 0, Math.PI * 2);
+  const ir = ctx.createRadialGradient(-5, 0, 0, -4, 3, 8);
+  ir.addColorStop(0, 'rgba(180,200,90,0.5)');
+  ir.addColorStop(0.35, 'rgba(90,120,50,0.22)');
+  ir.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = ir;
+  ctx.fill();
+  // cool secondary sheen
+  ctx.beginPath();
+  ctx.ellipse(5, 8, 3, 5, 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(40,70,90,0.12)';
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(8,12,4,0.7)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.ellipse(0, 7, simple ? 8 : 11.5, elyH, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // --- thorax ---
+  const th = ctx.createRadialGradient(-2, -10, 1, 0, -8, 10);
+  th.addColorStop(0, '#2e3820');
+  th.addColorStop(0.5, '#1a2214');
+  th.addColorStop(1, '#0e1208');
+  ctx.beginPath();
+  ctx.ellipse(0, -8, simple ? 6.5 : 8.5, simple ? 6 : 7, 0, 0, Math.PI * 2);
+  ctx.fillStyle = th;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(8,12,4,0.6)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // thorax highlight
+  ctx.beginPath();
+  ctx.ellipse(-2.5, -10, 2.5, 2, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(100,130,70,0.25)';
+  ctx.fill();
+
+  // --- head ---
+  ctx.beginPath();
+  ctx.ellipse(0, -15, simple ? 4.5 : 5.5, simple ? 3.8 : 4.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#12180c';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
+  // horns (scarab) — dark keratin
+  if (!simple || pr > 12) {
+    ctx.strokeStyle = '#0a0804';
+    ctx.lineWidth = simple ? 1.8 : 2.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-3.5, -17);
+    ctx.quadraticCurveTo(-10, -22, -7, -27);
+    ctx.moveTo(3.5, -17);
+    ctx.quadraticCurveTo(10, -22, 7, -27);
+    ctx.moveTo(0, -17);
+    ctx.lineTo(0, -25);
+    ctx.stroke();
+    ctx.fillStyle = '#0a0804';
+    ctx.beginPath(); ctx.arc(-7, -27, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(7, -27, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -25, 1.7, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // compound eyes — small dark, slight wet glint (NOT cute big eyes)
+  ctx.fillStyle = '#1a0804';
+  ctx.beginPath(); ctx.ellipse(-3.2, -15, 1.8, 1.4, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(3.2, -15, 1.8, 1.4, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(200,180,100,0.35)';
+  ctx.beginPath(); ctx.arc(-3.5, -15.4, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(2.9, -15.4, 0.5, 0, Math.PI * 2); ctx.fill();
+
+  // push force read: strain lines + dust when boosting
+  if (!simple && effort > 0.8) {
+    ctx.strokeStyle = `rgba(200,170,100,${0.25 * effort})`;
+    ctx.lineWidth = 1.2;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * 5, -24);
+      ctx.lineTo(i * 7, -34 - effort * 3);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawDeathPellets() {
+  if (!(state === 'devour' && devour && devour.pellets && devour.pellets.length)) return;
+  for (const pel of devour.pellets) {
+    if (pel.life <= 0) continue;
+    const a = Math.max(0, pel.life / (pel.max || 0.8));
+    const rr = pel.r * (0.85 + 0.15 * (1 - (pel.settle || 0)));
+    ctx.beginPath();
+    ctx.arc(pel.x, pel.y, rr, 0, Math.PI * 2);
+    ctx.fillStyle = pel.color;
+    ctx.globalAlpha = a * 0.95;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(20,10,4,0.55)';
+    ctx.lineWidth = Math.max(0.8, rr * 0.15);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    if(p.suck)continue; // replaced by the textured swallow, not a spray
+    const a = Math.max(0, p.life / p.max);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * a, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = a * 0.85;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  for (const d of dust) {
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.r * (d.eat ? .6 : 1), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(70,50,28,${d.a * (d.eat ? .3 : 1)})`;
+    ctx.fill();
+  }
+  // Swallow feedback is geometry, with no expanding rings or floating text.
+
+}
+
+function drawBoostGhosts() {
+  for (const g of boostGhosts) {
+    const u = clamp(g.life / g.max, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.18 + 0.28 * u;
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.heading);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, g.r * 1.05, g.r * (0.75 + 0.15 * u), 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(90,60,30,0.55)';
+    ctx.fill();
+    ctx.strokeStyle = `rgba(210,170,100,${0.35 * u})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // speed streaks
+    ctx.strokeStyle = `rgba(200,160,90,${0.4 * u})`;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-g.r * 0.2, -g.r * 0.35);
+    ctx.lineTo(-g.r * 1.8, -g.r * 0.2);
+    ctx.moveTo(-g.r * 0.2, g.r * 0.35);
+    ctx.lineTo(-g.r * 1.8, g.r * 0.2);
+    ctx.moveTo(-g.r * 0.1, 0);
+    ctx.lineTo(-g.r * 2.2, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawBoostFlash() {
+  drawBoostGhosts();
+  if (player.boostT <= 0) return;
+  const a = clamp(player.boostT / BOOST_DUR, 0, 1);
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.heading);
+  // wide dirt wake
+  const grd = ctx.createLinearGradient(-player.r * 0.2, 0, -player.r * 3.2, 0);
+  grd.addColorStop(0, `rgba(180,140,70,${0.55 * a})`);
+  grd.addColorStop(0.45, `rgba(120,85,40,${0.28 * a})`);
+  grd.addColorStop(1, 'rgba(80,55,25,0)');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.moveTo(-player.r * 0.15, -player.r * 0.55);
+  ctx.lineTo(-player.r * 3.0, -player.r * 0.95);
+  ctx.lineTo(-player.r * 3.0, player.r * 0.95);
+  ctx.lineTo(-player.r * 0.15, player.r * 0.55);
+  ctx.closePath();
+  ctx.fill();
+  // bright core streaks
+  ctx.strokeStyle = `rgba(235,200,110,${0.75 * a})`;
+  ctx.lineWidth = Math.max(3, player.r * 0.12);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-player.r * 0.2, 0);
+  ctx.lineTo(-player.r * 2.4, 0);
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(40,28,14,${0.45 * a})`;
+  ctx.lineWidth = Math.max(2, player.r * 0.06);
+  ctx.beginPath();
+  ctx.moveTo(-player.r * 0.15, -player.r * 0.35);
+  ctx.lineTo(-player.r * 2.0, -player.r * 0.55);
+  ctx.moveTo(-player.r * 0.15, player.r * 0.35);
+  ctx.lineTo(-player.r * 2.0, player.r * 0.55);
+  ctx.stroke();
+  // nose wind ring
+  ctx.beginPath();
+  ctx.ellipse(player.r * 0.15, 0, player.r * 0.35, player.r * 0.55, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(230,200,120,${0.35 * a})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFeastMandibles(hx, hy, ang, jaw, scale) {
+  // enlarged ~2× for close-up: open/close must read at cam.z~3.35
+  const open = jaw * (18 + scale * 0.55);
+  const len = 16 + scale * 0.55;
+  const base = 8 + scale * 0.2;
+  ctx.save();
+  ctx.translate(hx, hy);
+  ctx.rotate(ang + Math.PI / 2);
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * (3.5 + open * 0.15), 3);
+    ctx.lineTo(side * (base + open), -len * 0.35);
+    ctx.lineTo(side * (2 + open * 0.4), -len);
+    ctx.lineTo(side * 0.6, -len * 0.55);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, 3, 0, -len);
+    g.addColorStop(0, '#3a2814');
+    g.addColorStop(0.5, '#2a1c10');
+    g.addColorStop(1, '#1a1008');
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(10,6,2,0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  // mouth cavity when open
+  if (jaw > 0.12) {
+    ctx.beginPath();
+    ctx.ellipse(0, -3 - jaw * 3, 5.5 + jaw * 4, 3.5 + jaw * 5.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(12,6,2,${0.4 + jaw * 0.5})`;
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawFeastChunk(b) {
+  const a = clamp(b.life / b.max, 0, 1);
+  const r = b.r;
+  const seedN = (b.seed != null ? b.seed : (player && player.seed) || 1) | 0;
+  const picked = pickDungAtlas(seedN, Math.max(r, 12));
+
+  ctx.save();
+  ctx.globalAlpha = 0.65 + 0.35 * a;
+
+  // soft ground shadow
+  ctx.beginPath();
+  ctx.ellipse(b.x + r * 0.05, b.y + r * 0.75, r * 0.9, r * 0.28, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.fill();
+
+  if (picked) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.rot || b.roll || 0);
+    const tw = r * 2.2;
+    ctx.drawImage(picked.atlas, -tw / 2, -tw / 2, tw, tw);
+    ctx.restore();
+
+    // matte lighting (unrotated)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+    ctx.clip();
+    const hx = b.x - r * 0.28, hy = b.y - r * 0.34;
+    const shade = ctx.createRadialGradient(hx, hy, r * 0.05, b.x + r * 0.15, b.y + r * 0.2, r);
+    shade.addColorStop(0, 'rgba(255,242,210,0.18)');
+    shade.addColorStop(0.45, 'rgba(0,0,0,0)');
+    shade.addColorStop(1, 'rgba(0,0,0,0.38)');
+    ctx.fillStyle = shade;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    const hx = b.x - r * 0.35, hy = b.y - r * 0.40;
+    const grd = ctx.createRadialGradient(hx, hy, r * 0.08, b.x + r * 0.12, b.y + r * 0.18, r);
+    grd.addColorStop(0, '#a87840');
+    grd.addColorStop(0.35, '#6a4420');
+    grd.addColorStop(0.7, '#3a2410');
+    grd.addColorStop(1, '#1a1008');
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+  }
+
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(230,200,140,0.55)';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFeastCloseup() {
+  if (!feast) return;
+  const ang = feast.contactAng;
+  const br = Math.max(feast.ballR || 0, 0.5);
+  const mush = feast.mush || 0;
+  const jaw = feast.jaw || 0;
+
+  // fake cinematic ball — never rely on tiny leftover player.r art path alone
+  const feastBall = {
+    x: player.x,
+    y: player.y,
+    r: br,
+    roll: player.roll || 0,
+    seed: player.seed || 1,
+    squeeze: player.squeeze || 0,
+    stretch: player.stretch || 1,
+    squash: player.squash || 1,
+  };
+
+  // --- ball first (scalloped bites toward beetle) ---
+  if (br > 0.8) {
+    ctx.save();
+    if (feast.biteScallops && feast.biteScallops.length) {
+      ctx.beginPath();
+      ctx.arc(feastBall.x, feastBall.y, br, 0, Math.PI * 2);
+      for (const s of feast.biteScallops) {
+        const sx = feastBall.x + Math.cos(s.ang) * (br - s.depth * 0.15);
+        const sy = feastBall.y + Math.sin(s.ang) * (br - s.depth * 0.15);
+        ctx.moveTo(sx + s.depth, sy);
+        ctx.arc(sx, sy, s.depth * 1.15, 0, Math.PI * 2, true);
+      }
+      ctx.clip();
+    }
+    // brighter LOD2 dung fill (temp swap player.r so rim/player branch can apply)
+    const prevR = player.r;
+    player.r = br;
+    drawDungBall(player, 2);
+    player.r = prevR;
+    // extra brightening wash so ball reads vs dirt
+    ctx.beginPath();
+    ctx.arc(feastBall.x, feastBall.y, br * 0.92, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(160,120,60,0.14)';
+    ctx.fill();
+    ctx.restore();
+    // strong rim outline against dirt
+    ctx.beginPath();
+    ctx.arc(feastBall.x, feastBall.y, br, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(230,200,140,0.85)';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(feastBall.x, feastBall.y, br * 1.04, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200,165,90,0.4)';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    for (const s of (feast.biteScallops || [])) {
+      const sx = feastBall.x + Math.cos(s.ang) * (br * 0.92);
+      const sy = feastBall.y + Math.sin(s.ang) * (br * 0.92);
+      ctx.beginPath();
+      ctx.arc(sx, sy, s.depth * 0.95, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(18,10,4,0.55)';
+      ctx.fill();
+    }
+  }
+
+  // --- one large beetle ABOVE ball; local art ~40 tall → sc = beetleH/40 ---
+  const beetleH = br * 2.15 * lerp(1, 0.88, mush);
+  const sc = Math.max(1.8, beetleH / 40);
+  // head (~local y=-15) touches top of ball
+  const bodyDist = br + 15 * sc;
+  const bx = feastBall.x + Math.cos(ang) * bodyDist;
+  const by = feastBall.y + Math.sin(ang) * bodyDist;
+  // local -Y points toward ball (head into contact)
+  const rot = ang - Math.PI / 2;
+
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(rot);
+  ctx.scale(sc, sc * (1 - jaw * 0.05));
+
+  // ground shadow
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 13, 4.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fill();
+
+  // legs (simple braced)
+  ctx.strokeStyle = '#1a140c';
+  ctx.lineWidth = 2.8;
+  ctx.lineCap = 'round';
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * 6, -2);
+    ctx.lineTo(side * 14, -10 - jaw * 2);
+    ctx.moveTo(side * 7, 5);
+    ctx.lineTo(side * 16, 10);
+    ctx.moveTo(side * 6, 12);
+    ctx.lineTo(side * 14, 18);
+    ctx.stroke();
+  }
+
+  // abdomen / elytra
+  const ely = ctx.createLinearGradient(-10, 0, 12, 18);
+  ely.addColorStop(0, '#3a4a28');
+  ely.addColorStop(0.35, '#243018');
+  ely.addColorStop(0.7, '#141a0c');
+  ely.addColorStop(1, '#0a0c06');
+  ctx.beginPath();
+  ctx.ellipse(0, 8, 11, 14, 0, 0, Math.PI * 2);
+  ctx.fillStyle = ely;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(0, 20);
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // thorax
+  ctx.beginPath();
+  ctx.ellipse(0, -7, 8, 6.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a2214';
+  ctx.fill();
+
+  // head
+  ctx.beginPath();
+  ctx.ellipse(0, -15, 5.5, 4.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#12180c';
+  ctx.fill();
+
+  // horns
+  ctx.strokeStyle = '#0a0804';
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-3.5, -17);
+  ctx.quadraticCurveTo(-9, -22, -6.5, -26);
+  ctx.moveTo(3.5, -17);
+  ctx.quadraticCurveTo(9, -22, 6.5, -26);
+  ctx.moveTo(0, -17);
+  ctx.lineTo(0, -24);
+  ctx.stroke();
+
+  // eyes
+  ctx.fillStyle = '#1a0804';
+  ctx.beginPath(); ctx.ellipse(-3.2, -15, 1.7, 1.3, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(3.2, -15, 1.7, 1.3, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(200,180,100,0.35)';
+  ctx.beginPath(); ctx.arc(-3.5, -15.3, 0.45, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(2.9, -15.3, 0.45, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+
+  // big mandibles at mouth (scale ~2× prior relative size)
+  const mouth = feastMouthPos();
+  const hx = mouth.x - Math.cos(ang) * (2 + jaw * 2);
+  const hy = mouth.y - Math.sin(ang) * (2 + jaw * 2);
+  drawFeastMandibles(hx, hy, ang + Math.PI, jaw, Math.max(36, br * 0.85));
+
+  // flying chunks on top
+  for (const b of feast.bites) drawFeastChunk(b);
+}
+
+function draw() {
+  if(state==='devour'||(state==='dead'&&presentation.kind==='death')){drawDeathComedy();return;}
+  if(state==='feast'){drawVictoryComedy();return;}
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, vw, vh);
+  ctx.fillStyle = '#2a2218';
+  ctx.fillRect(0, 0, vw, vh);
+
+  worldTransform();
+  drawBackground();
+
+  const scaleView = viewScale();
+  const halfW = (vw / scaleView) * 0.55 + 90;
+  const halfH = (vh / scaleView) * 0.55 + 90;
+  const minX = cam.x - halfW, maxX = cam.x + halfW;
+  const minY = cam.y - halfH, maxY = cam.y + halfH;
+
+  const drawList = [];
+  const devourPred = (state === 'devour' && devour) ? devour.predator : null;
+  for (const b of balls) {
+    if (b.x + b.r < minX || b.x - b.r > maxX || b.y + b.r < minY || b.y - b.r > maxY) continue;
+    // during devour, draw predator after player so player ball goes under/into belly
+    let z = b.y + b.r;
+    if (devourPred && b === devourPred) z = 1e9;
+    drawList.push({ z, kind: 'ball', ref: b });
+  }
+  const hideDevourPlayer = state === 'devour' && devour && (devour.hidePlayer || player.hideBall || player.r < 0.5);
+  if (!hideDevourPlayer) {
+    // player under predator: slightly lower z than predator's forced top
+    const pz = devourPred ? (1e9 - 1) : (player.y + player.r);
+    drawList.push({ z: pz, kind: 'player', ref: player });
+  }
+  drawList.sort((a, b) => a.z - b.z);
+
+  for (const item of drawList) {
+    if (item.kind === 'player') {
+      if (state === 'feast' && feast) {
+        drawFeastCloseup();
+      } else if (state === 'devour' && devour) {
+        const style = devour.style || 'agar';
+        const u = clamp(devour.t / devour.dur, 0, 1);
+        const showP = player.r > 0.8 && !devour.hidePlayer && !player.hideBall;
+        if (showP) {
+          ctx.save();
+          // Bright outline so protagonist stays readable during long death
+          const pulse = devour.outlinePulse || 0.7;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, player.r * 1.12, 0, Math.PI * 2);
+          ctx.strokeStyle = style === 'hole'
+            ? `rgba(255,210,120,${0.35 + pulse * 0.35})`
+            : `rgba(255,240,200,${0.45 + pulse * 0.4})`;
+          ctx.lineWidth = Math.max(2.5, player.r * 0.12);
+          ctx.stroke();
+          if (style === 'hole') {
+            const tint = clamp(player.deathTint || u, 0, 1);
+            drawDungBall(player, 2);
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.r * 1.02, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(0,0,0,${0.12 + tint * 0.78})`;
+            ctx.fill();
+            // Keep face readable until late darken
+            if (tint < 0.85) {
+              ctx.globalAlpha = 1 - tint * 0.7;
+              drawBeetle(
+                player.x, player.y,
+                Math.max(12, player.r * 0.9 + 5),
+                player.beetleAng,
+                1, 1, false
+              );
+              ctx.globalAlpha = 1;
+            }
+          } else {
+            // agar hold / slither hold — full clear beetle + ball
+            drawBeetle(
+              player.x, player.y,
+              Math.max(12, player.r * 0.9 + 5),
+              player.beetleAng,
+              1, 1, false
+            );
+            drawDungBall(player, 2);
+          }
+          ctx.restore();
+        }
+        // slither pellets drawn via drawDeathPellets after ball pass
+      } else {
+        drawBeetle(player.x, player.y, player.r, player.beetleAng, player.pushEffort, player.squeeze, false);
+        drawEatRemnants();
+        drawPlayerEatBody();
+        drawEatContact();
+        drawBoostFlash();
+      }
+    } else {
+      const b = item.ref;
+      if (b.r >= 11) drawBeetle(b.x, b.y, b.r, b.beetleAng || Math.PI / 2, b.pushEffort || 0.3, b.squeeze || 0.3, true);
+      drawDungBall(b, b.r >= 36 ? 1 : 0);
+    }
+  }
+
+  drawParticles();
+  drawDeathPellets();
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (state === 'feast' && feast) {
+    // soft neutral vignette — center clear, edges dim
+    const vg = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.18, vw / 2, vh / 2, Math.max(vw, vh) * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0.04)');
+    vg.addColorStop(0.55, 'rgba(20,14,8,0.22)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, vw, vh);
+    // single stable title
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '800 26px sans-serif';
+    ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+    ctx.lineWidth = 5;
+    ctx.strokeText('开吃', vw / 2, vh * 0.22);
+    ctx.fillStyle = '#e8d4a0';
+    ctx.fillText('开吃', vw / 2, vh * 0.22);
+    ctx.restore();
+  }
+
+  // slither death pellets (world-space — redraw under UI after particles already drawn in world)
+  // (pellets are drawn in world pass below via drawDeathPellets called before setTransform reset)
+
+  if (state === 'devour' && devour) {
+    // Calm formal fail wash: soft desaturate + dark vignette (no zoom letterbox, no flash spam)
+    const wash = clamp(devour.failWash != null ? devour.failWash : (devour.t / Math.max(0.01, devour.dur)), 0, 1);
+    const vgA = clamp(devour.vignette || wash, 0, 1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.fillStyle = `rgba(0,0,0,${0.12 + wash * 0.62})`;
+    ctx.fillRect(0, 0, vw, vh);
+    ctx.restore();
+    // mild cool darken over center so pellets stay readable
+    ctx.fillStyle = `rgba(6,5,4,${0.04 + wash * 0.18})`;
+    ctx.fillRect(0, 0, vw, vh);
+    const vg = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.18, vw / 2, vh / 2, Math.max(vw, vh) * 0.78);
+    vg.addColorStop(0, `rgba(0,0,0,${0.02 + vgA * 0.06})`);
+    vg.addColorStop(0.55, `rgba(10,8,6,${0.08 + vgA * 0.2})`);
+    vg.addColorStop(1, `rgba(0,0,0,${0.32 + vgA * 0.42})`);
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, vw, vh);
+  }
+
+  if (state === 'play') {
+    if (player.boostT > 0) {
+      const a = clamp(player.boostT / BOOST_DUR, 0, 1);
+      ctx.save();
+      ctx.translate(vw * 0.5, vh * 0.58);
+      ctx.rotate(player.heading);
+      ctx.strokeStyle = `rgba(230,190,100,${0.18 * a})`;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      for (let i = -4; i <= 4; i++) {
+        if (i === 0) continue;
+        const yy = i * 16;
+        const len = 40 + (Math.abs(i) % 3) * 28;
+        ctx.globalAlpha = (0.25 + 0.55 * a) * (1 - Math.abs(i) / 6);
+        ctx.beginPath();
+        ctx.moveTo(-30 - len, yy);
+        ctx.lineTo(-30, yy * 0.6);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = player.boostT > 0 ? 'rgba(236,200,110,0.9)' : (player.boostCD > 0 ? 'rgba(160,140,110,0.3)' : 'rgba(200,180,140,0.55)');
+    const label = player.boostT > 0 ? '加速中' : (player.boostCD > 0 ? '加速冷却' : '加速就绪');
+    ctx.fillText(label, vw - 14, vh - 48);
+  }
+}
+
+// Render-only swallow snapshots: never placed in balls, never involved in collisions.
+const eatVisuals=[];
+function queueEatVisual(b){
+  const dx=b.x-player.x,dy=b.y-player.y;
+  const ratio=clamp(b.r/Math.max(1,player.r),.15,1.05);
+  eatVisuals.push({ball:{...b},dx,dy,angle:Math.atan2(dy,dx),t:0,duration:.28+ratio*.1,ratio});
+  if(eatVisuals.length>8)eatVisuals.shift();
+}
+function updateEatVisuals(dt){
+  if(state!=='play')return;
+  for(const v of eatVisuals)v.t+=dt;
+  for(let i=eatVisuals.length-1;i>=0;i--)if(eatVisuals[i].t>.66)eatVisuals.splice(i,1);
+}
+function drawEatRemnants(){
+  for(const v of eatVisuals){
+    const u=clamp(v.t/v.duration,0,1);if(u>=1)continue;
+    // A readable contact squeeze, followed by a quick pull under the eater's edge.
+    const pull=easeInCubic(u),pinch=Math.sin(u*Math.PI);
+    const rr=v.ball.r*(1-pull*.9);
+    const x=player.x+v.dx*(1-pull),y=player.y+v.dy*(1-pull);
+    ctx.save();ctx.translate(x,y);ctx.rotate(v.angle);
+    drawDungBall({...v.ball,x:0,y:0,r:rr,roll:(v.ball.roll||0)-v.angle,
+      stretch:1+pinch*.3,squash:1-pinch*.38,squeeze:0},v.ball.r>=26?1:0);
+    ctx.restore();
+  }
+}
+function drawPlayerEatBody(){
+  if(!eatVisuals.length){drawDungBall(player,2);return;}
+  const v=eatVisuals[eatVisuals.length-1],t=v.t;
+  const press=-.09*Math.sin(clamp(t/.18,0,1)*Math.PI);
+  const settle=t<.16?0:Math.sin((t-.16)*23)*Math.exp(-(t-.16)*9)*.12;
+  const amount=(press+settle)*(.65+v.ratio*.35);
+  const sq=player.squeeze||0;
+  const oldX=(player.stretch||1)*(1+sq*.06),oldY=(player.squash||1)*(1-sq*.08);
+  ctx.save();ctx.translate(player.x,player.y);ctx.rotate(v.angle);
+  ctx.scale(1+amount,1/(1+amount));ctx.rotate(-v.angle);
+  ctx.scale(1/oldX,1/oldY);ctx.translate(-player.x,-player.y);
+  drawDungBall(player,2);ctx.restore();
+}
+function drawEatContact(){
+  for(const v of eatVisuals){
+    const u=clamp(v.t/v.duration,0,1);if(u<=0||u>=1)continue;
+    // Tiny crumbs disappear into the contact edge. No flash, text or target markers.
+    const q=Math.sin(u*Math.PI),edge=player.r*(1-u*.18);
+    ctx.save();ctx.translate(player.x,player.y);ctx.rotate(v.angle);
+    ctx.lineCap='round';ctx.lineWidth=Math.max(1,player.r*.035);
+    ctx.strokeStyle=`rgba(44,28,14,${q*.55})`;ctx.beginPath();
+    ctx.arc(0,0,edge,-.20*q,.20*q);ctx.stroke();
+    for(let i=0;i<3;i++){
+      const drift=(i-1)*v.ball.r*.25*(1-u);
+      ctx.fillStyle=`rgba(${i%2?'114,78,40':'73,47,24'},${q*.8})`;
+      ctx.beginPath();ctx.arc(edge+q*v.ball.r*.15,drift,Math.max(1,Math.min(3,v.ball.r*.1))*(1-u*.6),0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// Presentation only. None of these functions run the simulation or change a live round.
+const presentation = {t:0,kind:null,from:null,pred:null,bites:0,sound:true,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches};
+const sceneFrame=document.getElementById('frame');
+const soundButton=document.getElementById('sound-btn');
+function resetPresentation(){
+  presentation.kind=null;presentation.t=0;presentation.bites=0;
+  eatVisuals.length=0;
+  sceneFrame.classList.remove('ending','animating','death-scene');
+}
+function beginPresentation(kind,pred){
+  presentation.kind=kind;presentation.t=0;presentation.bites=0;
+  presentation.from={...player};
+  presentation.pred=pred?{...pred}:null;
+  presentation.predRef=pred||null;
+  presentation.camera={...cam};
+  presentation.stats={kills,total:totalSpawned,seconds:Math.round(time),radius:Math.round(player.r)};
+  sceneFrame.classList.add('animating');
+  sceneFrame.classList.toggle('ending',kind==='win');
+  sceneFrame.classList.toggle('death-scene',kind==='death');
+  elToast.classList.remove('show');toastT=0;
+}
+function endTone(freq,end,duration=.15,type='triangle',volume=.08,delay=0){
+  if(!presentation.sound)return;
+  const ac=ensureAudio();if(!ac)return;
+  const t=ac.currentTime+delay,o=ac.createOscillator(),g=ac.createGain();
+  o.type=type;o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,end),t+duration);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(volume,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+duration);
+  o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+duration+.03);
+}
+function updateComedyDeath(dt){
+  if(!devour)return;
+  const previous=devour.t;devour.t+=dt;presentation.t=devour.t;
+  if(previous<.20&&devour.t>=.20){endTone(210,760,.12,'sine',.11);endTone(95,45,.12,'triangle',.13);}
+  if(previous<.76&&devour.t>=.76)landingSound();
+  if(previous<.98&&devour.t>=.98)endTone(190,65,.10,'triangle',.07);
+  if(previous<1.18&&devour.t>=1.18)endTone(460,280,.17,'sine',.04);
+  if(devour.t>=2.35)finishDeathCinematic();
+}
+function updateComedyWin(dt){
+  if(!feast)return;
+  const previous=feast.t;feast.t+=dt;presentation.t=feast.t;
+  for(let i=0;i<4;i++){
+    const at=.62+i*.43;
+    if(previous<at&&feast.t>=at){presentation.bites++;playEatSFX(24,65);endTone(220+i*48,140+i*28,.1,'triangle',.06);}
+  }
+  if(previous<2.65&&feast.t>=2.65){endTone(105,42,.32,'sawtooth',.055);endTone(250,170,.19,'sine',.04,.08);}
+  if(previous<3.05&&feast.t>=3.05)[262,330,392,523].forEach((f,i)=>endTone(f,f,.17,'triangle',.07,i*.07));
+  if(feast.t>=3.8)finishFeast();
+}
+function fillResult(id,won){
+  sceneFrame.classList.remove('animating');
+  const st=presentation.stats||{kills,total:totalSpawned,seconds:Math.round(time)};
+  const pct=st.total?Math.floor(st.kills/st.total*100):0;
+  document.getElementById(id).innerHTML=`<div><b>${st.kills}<small> / ${st.total}</small></b>吞掉的球</div><div><b>${won?'100':pct}<small>%</small></b>清场进度</div>`;
+}
+function paperText(text,x,y,size,color='#ffefb3',rotation=0){
+  ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`950 ${size}px "Microsoft YaHei",sans-serif`;
+  ctx.lineJoin='round';ctx.lineWidth=Math.max(3,size*.11);ctx.strokeStyle='#51381e';ctx.strokeText(text,0,0);ctx.fillStyle=color;ctx.fillText(text,0,0);ctx.restore();
+}
+function drawCineBall(x,y,r,seed,roll,sx=1,sy=1){
+  if(r<.4)return;
+  // Original textured ball renderer: no facial features, in any state.
+  drawDungBall({x,y,r,seed,roll,squash:sy,stretch:sx,squeeze:0},2);
+}
+function drawCineBeetle(x,y,angle,size,effort=.8,belly=1,flail=0){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(size*belly,size);
+  // Re-center the original insect renderer on its carapace. The ball is drawn separately.
+  const pr=18,sq=.3,dist=pr+20-(sq*.55+effort*.35)*9+(1-effort)*4;
+  drawBeetle(0,dist,pr,-Math.PI/2,effort,sq,false,presentation.t*(flail?2:1));
+  ctx.restore();
+}
+function cineBackdrop(){
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#292b18';ctx.fillRect(0,0,vw,vh);
+  ctx.save();ctx.globalAlpha=.5;ctx.drawImage(texDirt,0,0,vw,vh);ctx.restore();
+  const g=ctx.createRadialGradient(vw*.5,vh*.5,30,vw*.5,vh*.5,vh*.66);
+  g.addColorStop(0,'rgba(34,37,21,0)');g.addColorStop(1,'rgba(14,20,12,.92)');ctx.fillStyle=g;ctx.fillRect(0,0,vw,vh);
+  const c=vw/540;
+  ctx.save();ctx.scale(c,c);
+  return c;
+}
+function deathFlight(t,from,pred){
+  const effort=from.pushEffort||.5,sq=from.squeeze||0,a=from.beetleAng;
+  const dist=from.r+20-(sq*.55+effort*.35)*9+(1-effort)*4;
+  const bx=from.x+Math.cos(a)*dist,by=from.y+Math.sin(a)*dist;
+  const angle=Math.atan2(from.y-pred.y,from.x-pred.x);
+  const u=clamp((t-.24)/.52,0,1),travel=1-Math.pow(1-u,2);
+  const endX=clamp(bx+Math.cos(angle)*155,ARENA.x+45,ARENA.x+ARENA.w-45);
+  const endY=clamp(by+Math.sin(angle)*125,ARENA.y+50,ARENA.y+ARENA.h-50);
+  const land=Math.max(0,t-.76);
+  const bounce=land<.44?Math.abs(Math.sin(land/.22*Math.PI))*Math.exp(-land*7)*23:0;
+  return {bx,by,endX,endY,angle,u,land,
+    x:lerp(bx,endX,travel),y:lerp(by,endY,travel)-(presentation.reduced?0:Math.sin(u*Math.PI)*75+bounce),
+    turn:presentation.reduced?0:u*Math.PI*3.6,
+    scale:1+(presentation.reduced?0:Math.sin(u*Math.PI)*.24),
+    squash:land<.14?Math.sin(land/.14*Math.PI)*.52:0};
+}
+function drawFlungBeetle(t,from,pred,alpha=1){
+  const f=deathFlight(t,from,pred),effort=from.pushEffort||.5,sq=from.squeeze||0;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(f.x,f.y);
+  ctx.rotate(f.turn);ctx.scale(f.scale*(1+f.squash*.75),f.scale*(1-f.squash));ctx.translate(-f.bx,-f.by);
+  drawBeetle(from.x,from.y,from.r,from.beetleAng,t>.24?1:effort,sq,false,time+Math.max(0,t-.24)*3.6);
+  ctx.restore();
+}
+function deathBurst(x,y,angle,u,r){
+  if(u<=0||u>=1)return;
+  const strength=presentation.reduced?.38:1;
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  // Single contact star, then irregular earth chips. Everything is local to the collision.
+  if(u<.42){
+    const q=u/.42,rr=r*(.45+easeOutCubic(q)*1.4);
+    ctx.globalAlpha=(1-q)*.95*strength;ctx.beginPath();
+    for(let i=0;i<24;i++){
+      const aa=i*Math.PI/12,dd=rr*(i%2?.30:1+(i%3)*.1);
+      const x=Math.cos(aa)*dd,y=Math.sin(aa)*dd*.7;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.closePath();ctx.fillStyle='#ffe4a1';ctx.strokeStyle='#72502c';ctx.lineWidth=2;ctx.fill();ctx.stroke();
+  }
+  for(let i=0;i<18;i++){
+    const a=i*2.399,sp=r*(1.2+(i%5)*.35),d=easeOutCubic(u)*sp;
+    const x=Math.cos(a)*d,y=Math.sin(a)*d*.75+u*u*r*.6;
+    ctx.save();ctx.globalAlpha=(1-u)*strength;ctx.translate(x,y);ctx.rotate(a+u*5);
+    ctx.fillStyle=['#4c321c','#b48a52','#826039'][i%3];
+    const s=(2+i%4)*(1-u*.45);ctx.fillRect(-s,-s*.7,s*2,s*1.4);ctx.restore();
+  }
+  ctx.restore();
+}
+function drawLandingDust(f){
+  if(f.land<=0)return;
+  const u=clamp(f.land/.65,0,1),reduced=presentation.reduced?.45:1;
+  ctx.save();ctx.translate(f.endX,f.endY+12);
+  // A flat skid mark stays under the bug; dust rolls outwards instead of hiding it.
+  ctx.fillStyle='rgba(65,42,22,.25)';ctx.beginPath();ctx.ellipse(0,3,39,13,f.angle,0,Math.PI*2);ctx.fill();
+  for(let i=0;i<7;i++){
+    const a=i*2.399,d=16+(i%3)*7;
+    ctx.strokeStyle='rgba(67,42,20,.34)';ctx.lineWidth=1.7;ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*14,Math.sin(a)*6);ctx.lineTo(Math.cos(a)*d,Math.sin(a)*d*.4);ctx.stroke();
+  }
+  if(u<1)for(let i=0;i<14;i++){
+    const a=i*2.399,spread=easeOutCubic(u)*(30+(i%5)*11);
+    const x=Math.cos(a)*spread,y=Math.sin(a)*spread*.42-u*15;
+    const r=(8+(i%4)*4)*(1+u*.65);
+    ctx.globalAlpha=(1-u)*.40*reduced;ctx.fillStyle=i%2?'#c29b64':'#8f6e45';
+    ctx.beginPath();ctx.ellipse(x,y,r,r*.7,0,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+function landingSound(){
+  if(!presentation.sound)return;
+  endTone(145,38,.2,'sine',.23);endTone(330,80,.075,'triangle',.08);
+  const ac=ensureAudio();if(!ac)return;
+  const t=ac.currentTime,src=ac.createBufferSource(),filter=ac.createBiquadFilter(),gain=ac.createGain();
+  src.buffer=_noiseBuffer(ac,.2);filter.type='lowpass';filter.frequency.setValueAtTime(1600,t);filter.frequency.exponentialRampToValueAtTime(180,t+.2);
+  gain.gain.setValueAtTime(.14,t);gain.gain.exponentialRampToValueAtTime(.001,t+.2);
+  src.connect(filter);filter.connect(gain);gain.connect(ac.destination);src.start(t);src.stop(t+.21);
+}
+function drawDeathComedy(){
+  const t=presentation.t,from=presentation.from,pred=presentation.pred;
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);
+  ctx.fillStyle='#2a2218';ctx.fillRect(0,0,vw,vh);worldTransform();drawBackground();
+  const angle=Math.atan2(from.y-pred.y,from.x-pred.x);
+  const squeeze=clamp(t/.20,0,1),bite=clamp((t-.20)/.20,0,1),pull=easeInCubic(bite);
+  const finalR=Math.min(96,rOfVol(volOf(pred.r)+volOf(from.r)*.88));
+  const grow=easeOutCubic(clamp((t-.26)/.24,0,1));
+  const pulse=t>.32?Math.sin((t-.32)*26)*Math.exp(-(t-.32)*7)*.20:0;
+  const contactX=pred.x+Math.cos(angle)*pred.r*.85,contactY=pred.y+Math.sin(angle)*pred.r*.85;
+  for(const b of balls.filter(b=>b!==presentation.predRef).sort((a,b)=>a.y+a.r-b.y-b.r)){
+    if(b.r>=11)drawBeetle(b.x,b.y,b.r,b.beetleAng||Math.PI/2,b.pushEffort||.3,b.squeeze||.3,true);
+    drawDungBall(b,b.r>=36?1:0);
+  }
+  const f=deathFlight(t,from,pred);
+  drawLandingDust(f);
+  if(t>.24&&t<.76){
+    ctx.save();ctx.globalAlpha=.24;ctx.fillStyle='#382817';ctx.beginPath();
+    ctx.ellipse(f.x,lerp(f.by,f.endY,easeOutCubic(f.u))+14,24*(1-f.u*.25),7,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  if(bite<1){
+    ctx.save();ctx.translate(lerp(from.x,pred.x,pull),lerp(from.y,pred.y,pull));ctx.rotate(angle);
+    drawDungBall({...from,x:0,y:0,r:from.r*(1-pull*.95),roll:(from.roll||0)-angle,
+      stretch:1-squeeze*.48,squash:1+squeeze*.5,squeeze:0},2);ctx.restore();
+  }
+  if(pred.r>=11)drawBeetle(pred.x,pred.y,pred.r,pred.beetleAng||Math.PI/2,pred.pushEffort||.3,pred.squeeze||.3,true);
+  drawDungBall({...pred,r:lerp(pred.r,finalR,grow),stretch:1+pulse,squash:1-pulse,squeeze:0},pred.r>=36?1:0);
+  deathBurst(contactX,contactY,angle,clamp((t-.20)/.48,0,1),Math.max(34,from.r*1.35));
+  if(!presentation.reduced&&t>.28&&t<.77){
+    drawFlungBeetle(t-.09,from,pred,.10);drawFlungBeetle(t-.045,from,pred,.21);
+  }
+  drawFlungBeetle(t,from,pred);
+  if(f.land>0&&f.land<.18){
+    const u=f.land/.18;ctx.save();ctx.globalAlpha=(1-u)*.7;
+    ctx.strokeStyle='#e1bb7a';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(f.endX,f.endY+12,20+u*45,5+u*12,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }
+  if(t>1.02){
+    // Dizzy stars belong to the beetle, never to the dung balls.
+    const appear=clamp((t-1.02)/.2,0,1);
+    for(let i=0;i<3;i++){
+      const a=t*4.5+i*Math.PI*2/3,x=f.endX+Math.cos(a)*31,y=f.endY-31+Math.sin(a)*10;
+      ctx.save();ctx.translate(x,y);ctx.rotate(a*.3);ctx.globalAlpha=appear*.85;
+      ctx.beginPath();for(let j=0;j<10;j++){const aa=j*Math.PI/5,rr=j%2?2.5:6;const px=Math.cos(aa)*rr,py=Math.sin(aa)*rr;if(j===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+      ctx.closePath();ctx.fillStyle='#ffe49a';ctx.strokeStyle='#87602d';ctx.lineWidth=1;ctx.fill();ctx.stroke();ctx.restore();
+    }
+  }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function drawCrown(x,y,angle=0){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.beginPath();ctx.moveTo(-29,10);ctx.lineTo(-34,-20);ctx.lineTo(-13,-7);ctx.lineTo(0,-32);ctx.lineTo(13,-7);ctx.lineTo(34,-20);ctx.lineTo(29,10);ctx.closePath();
+  ctx.fillStyle='#ead06f';ctx.strokeStyle='#71501f';ctx.lineWidth=3;ctx.fill();ctx.stroke();
+  ctx.fillStyle='#839b4a';ctx.beginPath();ctx.arc(0,-3,5,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+function drawVictoryComedy(){
+  const t=presentation.t,c=cineBackdrop(),height=vh/c,cy=height*.57;
+  const bites=presentation.bites,phase=clamp((t-.62-(Math.max(0,bites-1))*.43)/.18,0,1);
+  const gulp=clamp((t-2.22)/.35,0,1);
+  const r=(96-bites*15)*(1-easeInCubic(gulp));
+  const chomp=t>.62&&t<2.2?Math.sin(phase*Math.PI):0;
+  const bugY=cy-122+chomp*17;
+  // Warm spotlight, no camera shake or spinning frame.
+  ctx.save();ctx.globalAlpha=.1;ctx.fillStyle='#f5d781';ctx.beginPath();ctx.moveTo(270,120);ctx.lineTo(445,cy+130);ctx.lineTo(95,cy+130);ctx.fill();ctx.restore();
+  drawCineBall(270,cy,Math.max(.1,r),player.seed,t*.5,1+chomp*.1,1-chomp*.15);
+  const belly=1+gulp*.45;
+  const burp=t>2.65?Math.sin(clamp((t-2.65)/.32,0,1)*Math.PI)*12:0;
+  drawCineBeetle(270+Math.sin(t*12)*chomp*2,bugY-burp,Math.PI+(t>2.8?Math.sin((t-2.8)*4)*.09:0),2.3,Math.max(.3,1-gulp*.6),belly);
+  // A few crumbs visibly arc from the rim into the insect's mouth on each bite.
+  if(bites>0&&t<2.45){
+    const u=clamp((t-(.62+(bites-1)*.43))/.32,0,1);
+    for(let i=0;i<5;i++){
+      const x=270+(i-2)*7*Math.sin(u*Math.PI),y=lerp(cy-Math.max(24,r),bugY+62,u)-Math.sin(u*Math.PI)*12;
+      ctx.fillStyle=['#4c3119','#997040','#795326'][i%3];ctx.beginPath();ctx.arc(x,y,(6-i*.6)*(1-u*.6),0,Math.PI*2);ctx.fill();
+    }
+  }
+  if(t<.5)paperText('这回轮到我开饭了',270,height*.23,32);
+  else if(t<2.22)paperText('啊呜！',270,height*.23,49,'#ffedac',-.045);
+  else if(t<2.65)paperText('最后一口也不能浪费',270,height*.23,27);
+  else{
+    paperText('嗝——',270,height*.23,47,'#f2edaa',.035);
+    paperText('吃撑了。真吃撑了。',270,cy+130,21,'#d9d9ad');
+  }
+  if(t>=3.05){
+    const drop=clamp((t-3.05)/.34,0,1),s=1-Math.pow(1-drop,3);
+    drawCrown(270,lerp(height*.28,bugY-56,s),Math.sin(drop*Math.PI)*.12);
+    if(!presentation.reduced)for(let i=0;i<25;i++){
+      const u=clamp((t-3.05)/.8,0,1),x=270+Math.sin(i*8.1)*(70+u*210),y=bugY-90+u*(130+(i%4)*30)-Math.sin(u*Math.PI)*80;
+      ctx.save();ctx.translate(x,y);ctx.rotate(i+u*6);ctx.fillStyle=['#e9d073','#b5d26e','#e9e2b4'][i%3];ctx.fillRect(-3,-5,6,10);ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+soundButton.onclick=()=>{
+  presentation.sound=!presentation.sound;soundButton.textContent=presentation.sound?'♪':'♩';
+  soundButton.setAttribute('aria-label',presentation.sound?'关闭音效':'开启音效');
+  soundButton.setAttribute('aria-pressed',String(!presentation.sound));
+  if(!presentation.sound&&_audioCtx)_audioCtx.suspend();
+};
+document.getElementById('skip-ending').onclick=()=>{
+  if(state==='devour'){presentation.t=2.35;finishDeathCinematic();}
+  else if(state==='feast')finishFeast();
+};
+
+let last = performance.now();
+function frame(now) {
+  let dt = Math.min(0.033, (now - last) / 1000);
+  last = now;
+  // RECORDING ONLY: __timeScale defaults to 1 (normal speed)
+  const ts = (typeof window.__timeScale === 'number' && window.__timeScale > 0) ? window.__timeScale : 1;
+  dt *= ts;
+  updateEatVisuals(dt);
+  if (dt > 0.024) { const sdt = dt * 0.5; update(sdt); update(sdt); }
+  else update(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* __BALL3D_SHOT_HOOK__ */
+(function () {
+  if (!/[?&]ball3dshot=1\b/.test(location.search)) return;
+  const arm = () => {
+    try { startPlay(); } catch (e) { console.error(e); }
+    // park a readable cluster in view
+    try {
+      player.r = Math.max(player.r, 42);
+      player.x = W * 0.42;
+      player.y = H * 0.40;
+      player.invuln = 99;
+      // grow a few nearby NPCs for LOD variety
+      let i = 0;
+      for (const b of balls) {
+        if (b === player) continue;
+        b.x = player.x + 90 + (i % 3) * 70;
+        b.y = player.y - 40 + Math.floor(i / 3) * 80;
+        b.r = [38, 26, 18, 48, 14, 32][i % 6];
+        i++;
+        if (i >= 6) break;
+      }
+    } catch (e) {}
+    let n = 0;
+    const tick = () => {
+      n++;
+      if (n < 12) { requestAnimationFrame(tick); return; }
+      window.__ball3dReady = true;
+      document.title = 'BALL3D_READY';
+      const hint = document.createElement('div');
+      hint.id = 'ball3dReadyFlag';
+      hint.textContent = 'READY';
+      hint.style.cssText = 'position:fixed;left:0;top:0;opacity:0.01;z-index:99999';
+      document.body.appendChild(hint);
+    };
+    requestAnimationFrame(tick);
+  };
+  setTimeout(arm, 250);
+})();
+
+elSz.textContent = '16';
+elTm.textContent = '∞';
+elLeft.textContent = '51';
+
+// DEMO helpers for death cinematic A/B (agar | hole | slither)
+// Win-take helpers: __timeScale / __clearAssist / __autoWinBot / __winTakePending / __startWinTake (defaults off; die→bounce only when __clearAssist)
+window.__forceDevour = function () {
+  if (state !== 'play') {
+    console.warn('__forceDevour: start a run first (state must be play)');
+    return false;
+  }
+  let best = null, bestD = Infinity;
+  const pr = player.r;
+  for (const b of balls) {
+    if (b.r <= pr * 1.04) continue;
+    const d = Math.hypot(b.x - player.x, b.y - player.y);
+    if (d < bestD) { bestD = d; best = b; }
+  }
+  if (!best) {
+    const ang = player.heading + Math.PI;
+    const r = Math.max(pr * 1.35 + 6, 28);
+    const x = clamp(player.x + Math.cos(ang) * (pr + r + 8), ARENA.x + r + 10, ARENA.x + ARENA.w - r - 10);
+    const y = clamp(player.y + Math.sin(ang) * (pr + r + 8), ARENA.y + r + 10, ARENA.y + ARENA.h - r - 10);
+    best = makeBall(x, y, r, 'ai');
+    best.tier = 'threat';
+    best.vx = 0; best.vy = 0;
+    balls.push(best);
+  }
+  startDeathCinematic(best, '眼没看清，撞上大家伙了。');
+  return true;
+};
+window.__forceDeath = function (style) {
+  if (style === 'agar' || style === 'hole' || style === 'slither') {
+    window.__deathStyle = style;
+  }
+  return window.__forceDevour();
+};
+
+})();
+</script>
+</body>
+</html>

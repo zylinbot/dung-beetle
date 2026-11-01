@@ -1,0 +1,68 @@
+:root{color-scheme:dark}
+/* 玩家自行判断；保留原逻辑的 DOM 引用，只隐藏场内提示。 */
+#hint,#boost-hint,#toast{display:none!important}
+#shell{background:radial-gradient(ellipse at 50% 25%,#434b26,#151b12 70%)}
+#frame{height:min(100dvh,calc(100vw * 16 / 9));width:min(100vw,calc(100dvh * 9 / 16));border-radius:12px;box-shadow:0 0 0 2px #726844,0 24px 80px #0008}
+.overlay{background:rgba(25,25,13,.77);backdrop-filter:blur(5px)}
+.card{width:min(100%,370px);padding:28px 24px 25px;border:2px solid #79633a;border-radius:28px;background:linear-gradient(160deg,#35351e,#202314);box-shadow:0 10px 0 #11180d,0 28px 70px #0006;color:#fff0c8}
+.card h1{font-size:clamp(32px,9vw,49px);letter-spacing:.04em;color:#fff1b6;font-weight:950;text-shadow:0 4px 0 #6e4627,2px 0 #6e4627,-2px 0 #6e4627;line-height:1.2;margin:6px 0 15px}
+.card .eyebrow{font-size:11px;letter-spacing:.23em;color:#c5df7b;font-weight:800}
+.card .sub{font-size:14px;opacity:1;color:#e6d8b5;line-height:1.7;margin:0 0 18px}
+.card .tips{margin:16px 0 21px;padding:12px 10px;font-size:12px;line-height:1.9;color:#c9cba6;opacity:1;background:#141c1280;border:1px solid #5a603c;text-align:center}
+.card .tips b{color:#f3df97}
+.btn{width:100%;font-size:18px;font-weight:900;background:#c6e26c;color:#27331b;border-radius:15px;padding:15px 18px;box-shadow:0 6px 0 #607a35,0 9px 18px #0004}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #607a35}
+.menu-hero{position:relative;width:154px;height:108px;margin:6px auto 16px;isolation:isolate}
+.hero-ball{position:absolute;right:2px;top:5px;width:100px;height:100px;border-radius:48% 52% 46% 54%;background:radial-gradient(circle at 30% 25%,#ffffff22,transparent 50%,#0009),url('tex/dung-b.jpg') center/cover;border:3px solid #322313;box-shadow:inset -10px -10px 20px #0007,0 8px 0 #14180d88;animation:ball-roll 2.4s ease-in-out infinite}
+.hero-beetle{position:absolute;width:28px;height:43px;left:8px;top:59px;transform:rotate(70deg);border-radius:45% 45% 50% 50%;background:linear-gradient(90deg,#414b25,#1c2818 48%,#0f180f 51%,#354123);box-shadow:inset 0 2px 2px #91a05c55,0 4px 4px #0008;border:2px solid #10170b;animation:beetle-push .35s ease-in-out infinite alternate}
+.hero-beetle:before,.hero-beetle:after{content:'';position:absolute;left:-12px;top:7px;width:48px;height:21px;border:3px solid #17200e;border-radius:35%;z-index:-1;transform:rotate(18deg)}
+.hero-beetle:after{transform:rotate(-18deg);top:11px}
+@keyframes ball-roll{0%,100%{transform:rotate(-7deg) scale(1.025,.975)}50%{transform:rotate(7deg) scale(.975,1.025)}}
+@keyframes beetle-push{to{transform:translate(2px,-1px) rotate(76deg)}}
+.menu-note{font-size:11px;color:#afb48a;margin-top:18px}
+#hud{padding:12px 12px 0}
+#hud-row{gap:8px;padding-right:42px}
+.chip{flex:1;text-align:center;font-size:11px;border:1px solid #a98b5355;border-radius:12px;background:#222414e8;color:#b9c29a;padding:7px 6px;backdrop-filter:blur(4px)}
+.chip b{display:block;color:#ffefb0;font-size:20px;line-height:1.25;font-weight:900;font-variant-numeric:tabular-nums}
+#hint{color:#fff2cc;font-size:11px;line-height:1.4;text-shadow:0 1px 4px #000;margin-top:10px}
+#sound-btn{position:absolute;top:12px;right:10px;z-index:40;width:33px;height:38px;border:1px solid #b8bb8144;background:#252b1e;color:#e4e6b4;border-radius:10px;font-size:16px;cursor:pointer}
+#sound-btn[aria-pressed=true]{color:#90977b}
+#bar-wrap{bottom:18px;left:18px;right:18px}
+#bar-lab{font-size:11px;color:#e6edbd}
+#bar-lab span{color:#ffefbe;text-shadow:0 1px 4px #332512}
+#bar{height:8px;background:#242a1baa;border-color:#b2b78077}
+#bar-fill{background:linear-gradient(90deg,#8caa4c,#e0ed82)}
+#boost-hint{color:#e4e8bd;font-size:10px;bottom:48px}
+#boost-hint kbd{color:#f5efbf;background:#252c19cc;border-color:#a1ac7180;font-size:10px}
+#stick{background:#292f1c66;border:2px solid #eef2ac77}
+#stick-knob{background:#c0d778aa;border:2px solid #edfcc1}
+.toast{color:#fff2b0;text-shadow:0 2px 5px #463319}
+.ending #hud,.ending #bar-wrap,.ending #boost-hint,.ending #stick,.ending #toast{opacity:0!important;pointer-events:none}
+#skip-ending{display:none;position:absolute;bottom:20px;right:18px;z-index:14;border:1px solid #b1ae7770;border-radius:12px;padding:9px 13px;background:#222b1bbb;color:#e8e5bb;font-size:11px;cursor:pointer}
+.animating #skip-ending{display:block}
+.round-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:22px 0 25px;color:#bbc5a0;font-size:11px}
+.round-stats b{display:block;color:#ffedb4;font-size:28px;margin-bottom:5px}
+.round-stats small{font-size:12px;font-weight:500;color:#c8d0a8}
+.stamp{display:inline-block;color:#e7b77e;border:2px solid #b3834f;border-radius:6px;padding:5px 12px;transform:rotate(-7deg);font-size:13px;font-weight:900;letter-spacing:.15em;margin-bottom:15px}
+.stamp.win{color:#d9e895;border-color:#99b458;transform:rotate(5deg)}
+#dead:not(.hidden) .card{animation:card-plop .48s cubic-bezier(.2,.85,.3,1) both}
+#win:not(.hidden) .card{animation:card-win .55s cubic-bezier(.2,.85,.3,1) both}
+@keyframes card-plop{0%{opacity:0;transform:translateY(-28px) rotate(-7deg) scale(1.16)}65%{opacity:1;transform:translateY(5px) rotate(2deg) scale(.98)}100%{transform:translateY(0) rotate(0) scale(1)}}
+@keyframes card-win{0%{opacity:0;transform:translateY(35px) scale(.7)}65%{opacity:1;transform:translateY(-4px) scale(1.04)}100%{transform:translateY(0) scale(1)}}
+.card.win-card{width:min(100%,370px)}
+.card.win-card h1{font-size:36px}
+@media(max-height:680px){.menu-hero{transform:scale(.8);height:85px;margin-bottom:8px}.card{padding:20px 18px}.card h1{font-size:32px;margin:6px 0 10px}.card .tips{margin:12px 0;font-size:10px}.card .sub{font-size:12px;margin-bottom:10px}.menu-note{margin-top:13px}.btn{padding:12px;font-size:16px}#hint{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.hero-ball,.hero-beetle,#dead:not(.hidden) .card,#win:not(.hidden) .card{animation:none}}
+
+/* Fail in the arena. The result is a compact dock over the unchanged playfield. */
+#dead{background:transparent;backdrop-filter:none;align-items:flex-end;padding:16px;pointer-events:none}
+#dead .card{pointer-events:auto;width:min(100%,370px);padding:16px 18px;border-radius:20px;background:#242919f2;box-shadow:0 8px 24px #0005;animation:fail-dock .28s ease-out both}
+#dead .stamp{display:none}
+#dead h1{font-size:26px;margin:0 0 7px}
+#dead .sub{font-size:11px;margin:0 0 7px}
+#dead .round-stats{display:flex;justify-content:center;gap:26px;margin:10px 0 14px}
+#dead .round-stats b{font-size:22px;margin-bottom:2px}
+#dead .btn{font-size:16px;padding:11px}
+#dead:not(.hidden) .card{animation:fail-dock .28s ease-out both}
+@keyframes fail-dock{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){#dead:not(.hidden) .card{animation:none}}
